@@ -558,6 +558,37 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .tw-gym.st-joker strong { color: var(--joker); }
 .tw-gym.st-missed strong { color: var(--flame); }
 .tw-gymlist { margin: 10px 0 0; }
+/* Vorschau nächste Woche */
+.tw-next { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.tw-next-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tw-next-note { margin: 10px 0 0; font-size: .95rem; }
+.tw-next-note strong { color: var(--flame-2); }
+.tw-days { display: grid; gap: 8px; margin-top: 12px; }
+.tw-day { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: start; }
+.tw-day-label { padding-top: 7px; }
+.tw-day-items { display: grid; gap: 4px; min-width: 0; }
+.tw-plan { border-radius: var(--radius-sm); background: var(--surface-2); font-size: .92rem; }
+.tw-plan summary, .tw-plan-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 7px 10px; }
+.tw-plan summary { cursor: pointer; list-style: none; }
+.tw-plan summary::-webkit-details-marker { display: none; }
+.tw-plan[open] summary { border-bottom: 1px solid var(--border); }
+.tw-plan p { margin: 0; padding: 8px 10px 10px; white-space: pre-line; color: var(--muted); }
+.tw-plan-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tw-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+.tw-dot.s-swim { background: var(--joker); }
+.tw-dot.s-bike { background: var(--good); }
+.tw-dot.s-run { background: var(--flame); }
+.tw-dot.s-strength { background: var(--accent); }
+.tw-dot.s-race { background: var(--flame-2); }
+.tw-chg { flex-basis: 100%; font-size: .8rem; font-weight: 600; }
+.tw-chg.c-moved, .tw-chg.c-changed { color: var(--flame-2); }
+.tw-chg.c-new { color: var(--good); }
+.tw-chg.c-removed { color: var(--danger); }
+.tw-chg.tw-chg-inline { flex-basis: auto; margin-left: 4px; }
+.tw-removed-h { margin: 12px 0 4px; }
+.tw-removed { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.tw-removed li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tw-fetched { margin: 10px 0 0; }
 
 /* ---------- Werte ---------- */
 .values-group { padding: 14px 16px 6px; }

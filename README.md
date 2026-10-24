@@ -44,7 +44,7 @@ Bestehende localStorage-Schlüssel (`dehnapp.*`) und Dateinamen im Daten-Reposit
 | `dehn-audio/` | Generator | | Sprachansagen als WAV-Bausteine plus `index.json` (Text → Datei) |
 | `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
 | `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen) |
-| `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) – App liest nur |
+| `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) und `next` = Vorschau auf die nächste Woche aus dem Trainingsplan (Einheiten pro Tag, Abweichungen vom Original) – App liest nur |
 | `training/values.json` | ✓ | | Werte: `groups[].items[]` mit `unit`, `kind` (`number`/`pace`/`time`), `better`, `entries[]` (`date` optional) |
 
 Die Ansagen werden wie die Countdown-Töne über Web Audio abgespielt. Auf iPhone/iPad gibt es im Player einen
@@ -86,4 +86,6 @@ ausgeschlossen.
 ## Bedienung
 
 Tippen auf den Ring = Pause. Tastatur: **Leertaste** Pause, **→** überspringen, **←** zurück, **Enter** „Fertig“, **Esc** abbrechen.
-Trainingswoche: Pfeile, Wischen oder Tippen auf einen Wochenbalken blättert durch ältere Wochen.
+Trainingswoche: Pfeile, Wischen oder Tippen auf einen Wochenbalken blättert durch ältere Wochen. Bei der neuesten Woche steht
+darunter die Vorschau *Nächste Woche* (geplante Stunden je Sportart, Einheiten pro Tag zum Aufklappen, Markierung
+verschoben / geändert / neu / entfällt).

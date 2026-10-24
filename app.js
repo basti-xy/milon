@@ -1274,7 +1274,40 @@ const fmtRange = (from, to) => {
   const a = parseDay(from); const b = parseDay(to);
   return `${a.getDate()}.${a.getMonth() + 1 === b.getMonth() + 1 ? '' : `${a.getMonth() + 1}.`}–${b.getDate()}.${b.getMonth() + 1}.`;
 };
-const SPORT_LABELS = { swim: 'Schwimmen', bike: 'Rad', run: 'Laufen', gym: 'Gym' };
+const SPORT_LABELS = { swim: 'Schwimmen', bike: 'Rad', run: 'Laufen', gym: 'Gym', strength: 'Kraft', race: 'Wettkampf' };
+const fmtMin = (m) => (m ? `${Math.floor(m / 60)}:${pad2(m % 60)}` : '');
+
+/** Vorschau auf die nächste Woche aus dem Trainingsplan (weekly.json → next), Abweichungen vom Original markiert. */
+function nextWeekHtml(n) {
+  if (!n || !n.days) return '';
+  const kw = Number(n.week.split('-W')[1]);
+  const p = n.plan;
+  const totals = ['swim', 'bike', 'run', 'strength'].filter((k) => n.totals?.[k])
+    .map((k) => `${SPORT_LABELS[k]} <strong>${fmtHours(n.totals[k])}</strong>`).join('<span class="tw-sep">·</span>');
+  const days = n.days.filter((d) => d.items.length).map((d) => `<div class="tw-day">
+      <div class="tw-day-label small muted">${esc(fmtDate(d.date))}</div>
+      <div class="tw-day-items">${d.items.map((i) => {
+        const chg = i.change ? `<span class="tw-chg c-${esc(i.change.type)}">${esc(i.change.text)}</span>` : '';
+        const head = `<span class="tw-dot s-${esc(i.sport)}" aria-hidden="true"></span><span class="tw-plan-title">${esc(i.title)}</span><span class="small muted">${i.sport === 'race' ? 'Wettkampf' : fmtMin(i.min)}</span>${chg}`;
+        return i.desc
+          ? `<details class="tw-plan"><summary>${head}</summary><p class="small">${esc(i.desc)}</p></details>`
+          : `<div class="tw-plan"><div class="tw-plan-row">${head}</div></div>`;
+      }).join('')}</div>
+    </div>`).join('');
+  const removed = (n.removed || []).map((r) =>
+    `<li><span class="tw-dot s-${esc(r.sport)}" aria-hidden="true"></span>${esc(fmtDate(r.date))} ${esc(r.title)} <span class="tw-chg tw-chg-inline c-${esc(r.type || 'removed')}">${esc(r.text)}</span></li>`).join('');
+  return `<div class="tw-next">
+    <div class="tw-next-head">
+      <div class="today-label">Nächste Woche · KW ${kw} · ${esc(fmtRange(n.from, n.to))}</div>
+      ${p ? `<div class="small muted">${esc(p.phase || 'Plan')}${p.of ? ` · Woche ${p.week}/${p.of}` : ''}</div>` : ''}
+    </div>
+    <div class="tw-rec small"><span>Geplant <strong>${fmtHours(n.hours)} h</strong></span>${totals ? `<span class="tw-sep">·</span>${totals}` : ''}</div>
+    ${n.note ? `<p class="tw-next-note"><strong>Einordnung:</strong> ${esc(n.note)}</p>` : ''}
+    ${days ? `<div class="tw-days">${days}</div>` : '<p class="small muted">Für diese Woche stehen noch keine Einheiten im Plan.</p>'}
+    ${removed ? `<p class="small muted tw-removed-h">Gegenüber dem Original-Plan entfallen:</p><ul class="tw-removed small">${removed}</ul>` : ''}
+    ${n.fetched ? `<p class="small muted tw-fetched">Plan-Stand vom ${esc(fmtDate(n.fetched))}</p>` : ''}
+  </div>`;
+}
 const INSIGHT_MARK = { good: '✓', bad: '✗', info: '•', next: '→' };
 
 function trainingData() {
@@ -1344,6 +1377,7 @@ function trainingHtml() {
     ${gym?.sessions.length ? `<p class="tw-gymlist small muted">Gym: ${gym.sessions.map((s) => esc(`${fmtDate(s.date)} ${s.splitName}`)).join(' · ')}</p>` : ''}
     ${gym ? `<p class="tw-gymlist small">Gym-Streak <strong>${gym.streak} ${plural(gym.streak, 'Woche', 'Wochen')}</strong> <span class="muted">· Rekord ${gym.best}</span></p>` : ''}
     ${rec ? `<div class="tw-rec small">${rec}</div>` : ''}
+    ${idx === 0 ? nextWeekHtml(d.next) : ''}
   </section>`;
 }
 /** Nur die Karte neu zeichnen (Blättern), Rest der Seite bleibt. */
@@ -2012,4 +2046,6 @@ async function init() {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 }
-init();
+// erst starten, wenn auch gym.js und werte.js geladen sind (sonst fehlt z. B. gymTodayHtml, wenn alles aus dem Cache kommt)
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
