@@ -19,6 +19,12 @@
   --right: #ff6fa5;
   --danger: #ff5d5d;
   --joker: #7cc4ff;
+  /* Standardfarben der Sportarten – überall verwenden, wo Sportarten erscheinen */
+  --sport-swim: #7cc4ff;
+  --sport-bike: #3ddc97;
+  --sport-run: #f0506e;
+  --sport-strength: #8a7dff;
+  --sport-race: #ffc24d;
   --radius: 18px;
   --radius-sm: 12px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -575,11 +581,12 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .tw-plan p { margin: 0; padding: 8px 10px 10px; white-space: pre-line; color: var(--muted); }
 .tw-plan-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .tw-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
-.tw-dot.s-swim { background: var(--joker); }
-.tw-dot.s-bike { background: var(--good); }
-.tw-dot.s-run { background: var(--flame); }
-.tw-dot.s-strength { background: var(--accent); }
-.tw-dot.s-race { background: var(--flame-2); }
+.tw-dot.s-swim { background: var(--sport-swim); }
+.tw-dot.s-bike { background: var(--sport-bike); }
+.tw-dot.s-run { background: var(--sport-run); }
+.tw-dot.s-strength, .tw-dot.s-gym { background: var(--sport-strength); }
+.tw-dot.s-race { background: var(--sport-race); }
+.tw-sport-label { display: flex; align-items: center; gap: 6px; }
 .tw-chg { flex-basis: 100%; font-size: .8rem; font-weight: 600; }
 .tw-chg.c-moved, .tw-chg.c-changed { color: var(--flame-2); }
 .tw-chg.c-new { color: var(--good); }

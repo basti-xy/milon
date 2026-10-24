@@ -1343,8 +1343,8 @@ function trainingHtml() {
   const gym = typeof gymWeekSummary === 'function' ? gymWeekSummary(w.from, w.to) : null;
   const sports = ['swim', 'bike', 'run'].filter((k) => w.sports?.[k]).map((k) => {
     const s = w.sports[k];
-    return `<div class="tw-sport"><span class="muted">${SPORT_LABELS[k]}</span><strong>${fmtNum(s.km, k === 'bike' ? 0 : 1)} km</strong><span class="muted small">${fmtHours(s.h)} h · ${s.n}×</span></div>`;
-  }).join('') + (gym ? `<div class="tw-sport tw-gym st-${gym.status}"><span class="muted">Gym</span><strong>${gym.n}/${gym.target}</strong><span class="muted small">${esc(gym.statusLabel)}</span></div>` : '');
+    return `<div class="tw-sport"><span class="muted tw-sport-label"><span class="tw-dot s-${k}" aria-hidden="true"></span>${SPORT_LABELS[k]}</span><strong>${fmtNum(s.km, k === 'bike' ? 0 : 1)} km</strong><span class="muted small">${fmtHours(s.h)} h · ${s.n}×</span></div>`;
+  }).join('') + (gym ? `<div class="tw-sport tw-gym st-${gym.status}"><span class="muted tw-sport-label"><span class="tw-dot s-gym" aria-hidden="true"></span>Gym</span><strong>${gym.n}/${gym.target}</strong><span class="muted small">${esc(gym.statusLabel)}</span></div>` : '');
   const r = w.recovery || {};
   const arrow = (now, prev, higherIsGood) => {
     if (now == null || prev == null || Math.abs(now - prev) < 1) return '';

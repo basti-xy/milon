@@ -6,6 +6,9 @@ alles Inhaltliche liegt im privaten Repo `app-daten`. Vor jedem Push öffentlich
 
 ## Regeln
 - Vanilla JS, kein Framework, kein Build. Dunkles Design über CSS-Variablen (`--accent`, `--accent-grad`, `--good` …).
+- **Standardfarben der Sportarten** (überall verwenden, wo Sportarten erscheinen): `--sport-swim` #7cc4ff (Hellblau),
+  `--sport-bike` #3ddc97 (Grün), `--sport-run` #f0506e (Karmin – bewusst nicht das Fehler-Rot `--danger`),
+  `--sport-strength` #8a7dff (Lila, auch Gym), `--sport-race` #ffc24d (Goldgelb, Wettkampf). Punkt: `.tw-dot.s-<sport>`.
 - Mobile first (iPhone/iPad, Safe Areas), auch Tablet/Laptop. Offline-fähig (sw.js, Network-first).
 - Nach jeder Änderung `?v=…` in `index.html` und `CACHE` in `sw.js` hochzählen; neue Dateien in `ASSETS` von `sw.js`.
 - localStorage-Schlüssel `dehnapp.*` und Dateinamen in app-daten (`dehn.json`, `dehn-routines.json`, `dehn-audio/`, `gym.json` …)
