@@ -59,6 +59,9 @@ function trendHtml(item, entries) {
   return `<span class="${cls}" title="ggü. ${esc(fmtValue(item, entries[entries.length - 2].value))}">${up ? '↑' : '↓'}</span>`;
 }
 
+/** "Wettkampf · Anmerkung" eines Eintrags (event ist optional). */
+const entryInfo = (e) => [e.event, e.note].filter(Boolean).join(' · ');
+
 function valueItemHtml(item) {
   const entries = Array.isArray(item.entries) ? item.entries : [];
   const cur = entries[entries.length - 1];
@@ -75,14 +78,14 @@ function valueItemHtml(item) {
     <summary>
       <div class="val-main">
         <div class="val-name">${esc(item.name)}</div>
-        <div class="small muted">${cur.date ? `Stand ${esc(fmtStand(cur.date))}` : 'aktuell'}${cur.note ? ` · ${esc(cur.note)}` : ''}</div>
+        <div class="small muted">${cur.date ? `Stand ${esc(fmtStand(cur.date))}` : 'aktuell'}${(entries.length > 1 ? cur.event : entryInfo(cur)) ? ` · ${esc(entries.length > 1 ? cur.event : entryInfo(cur))}` : ''}</div>
       </div>
       ${spark ? `<div class="val-spark">${spark}</div>` : ''}
       <div class="val-value"><strong>${esc(fmtValue(item, cur.value))}</strong> <span class="muted">${esc(item.unit || '')}</span>${trendHtml(item, entries)}</div>
     </summary>
     ${entries.length > 1 ? `<ul class="hist-list val-hist">${[...entries].reverse().map((e) => `<li>
       <span class="hist-date">${esc(fmtStand(e.date))}</span>
-      <span class="hist-name">${esc(fmtValue(item, e.value))} ${esc(item.unit || '')}${e.note ? ` <span class="muted small">· ${esc(e.note)}</span>` : ''}</span>
+      <span class="hist-name">${esc(fmtValue(item, e.value))} ${esc(item.unit || '')}${entryInfo(e) ? ` <span class="muted small">· ${esc(entryInfo(e))}</span>` : ''}</span>
     </li>`).join('')}</ul>` : ''}
   </details>`;
 }
