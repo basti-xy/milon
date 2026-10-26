@@ -15,7 +15,7 @@ Hier liegt nur der Programmcode.
 | Tab | Inhalt |
 |---|---|
 | **Heute** | Dehn-Aufgabe des Tages, Gym-Status der Woche mit nächstem Split, Karte *Trainingswoche* |
-| **Gym** | Wochenziel, Gym-Streak mit Kalender, Splits (abhaken oder ausführlich erfassen), letzte Einheiten, Progression pro Übung |
+| **Gym** | Wochenziel, Gym-Streak mit Kalender, Splits (abhaken, aussetzen oder ausführlich erfassen), letzte Einheiten, Progression pro Übung. Beim Erfassen: Satz per Haken (mit Uhrzeit), Pausenuhr unten, „Jetzt dran“-Fokus (Supersätze abwechselnd), Bildschirm bleibt an, danach Abschluss-Übersicht (Dauer, Volumen, Ø Pause, neue Bestwerte, nächstes Mal steigern) |
 | **Dehnen** | Dehn-Streak mit Kalender, Wochen-Routine, alle Routinen, Player mit Timer und Sprachansagen |
 | **Werte** | Leistungs- und Körperwerte mit Stand-Datum und Verlauf |
 
@@ -43,7 +43,7 @@ Bestehende localStorage-Schlüssel (`dehnapp.*`) und Dateinamen im Daten-Reposit
 | `dehn.json` | | ✓ | Dehn-Verlauf (Sync + Merge, Löschmarkierungen) |
 | `dehn-audio/` | Generator | | Sprachansagen als WAV-Bausteine plus `index.json` (Text → Datei) |
 | `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
-| `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen) |
+| `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen). Sätze mit `at` (Uhrzeit des Abhakens); ausgesetzte Einheiten mit `skipped: true` und `reason` |
 | `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) und `next` = Vorschau auf die nächste Woche aus dem Trainingsplan (Einheiten pro Tag, Abweichungen vom Original) – App liest nur |
 | `training/values.json` | ✓ | | Werte: `groups[].items[]` mit `unit`, `kind` (`number`/`pace`/`time`), `better`, `entries[]` (`date` optional) |
 
@@ -73,7 +73,9 @@ Offline nutzt sie die zuletzt geladene Version.
   Kalenderwoche wird von einem Joker abgefangen, danach beginnt die Streak neu. Die Wochen-Routine hat eine eigene Wochen-Streak.
 - **Gym:** Wochen (Mo–So) in Folge mit mindestens `weeklyTarget` Einheiten (abgehakt oder ausführlich). Die laufende Woche
   bleibt offen. Ein Joker pro Kalendermonat (Monat des Donnerstags der Woche) fängt eine verpasste Woche ab, die Streak
-  bleibt dann stehen; die zweite verpasste Woche im selben Monat setzt sie auf 0.
+  bleibt dann stehen; die zweite verpasste Woche im selben Monat setzt sie auf 0. **Aussetzen** (z. B. Tag nach einem
+  Wettkampf): zählt nicht als Einheit, senkt aber das Wochenziel dieser Woche um 1 (mindestens 1) und schiebt die
+  Split-Reihenfolge weiter; lässt sich in „Letzte Einheiten“ zurücknehmen.
 - **Progression:** Haben beim letzten Mal alle Sätze das obere Ende der Wiederholungsspanne erreicht, zeigt die App
   „+`stepKg` kg probieren“ (bei Körpergewicht: mehr Wdh./Zusatzgewicht, bei Zeit: +5 s). Aufwärmsätze zählen nicht.
 

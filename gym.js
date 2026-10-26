@@ -126,6 +126,17 @@ function deleteGymSession(id) {
 
 /* ---------- Woche, nächster Split, Streak ---------- */
 const sessionsInWeek = (wk, list = getGymSessions()) => list.filter((s) => weekKey(parseDay(s.date)) === wk);
+/* Ausgesetzte Einheit: Eintrag mit skipped = true (z. B. Tag nach einem Wettkampf). Zählt nicht als Einheit,
+   senkt aber das Wochenziel dieser Woche um 1 (mindestens 1) und schiebt die Split-Reihenfolge weiter. */
+const isSkip = (s) => !!s?.skipped;
+const SKIP_REASONS = { recovery: 'Wettkampf / Erholung', sick: 'Krank', travel: 'Reise', other: 'Sonstiges' };
+/** Einheiten, Aussetzer und Ziel einer Woche (Schlüssel = Montag). */
+function weekCounts(wk, list = getGymSessions(), target = weeklyTarget()) {
+  const all = sessionsInWeek(wk, list);
+  const done = all.filter((s) => !isSkip(s));
+  const skipped = all.length - done.length;
+  return { all, done, n: done.length, skipped, target: Math.max(1, target - skipped) };
+}
 function nextSplit(list = getGymSessions()) {
   const splits = gymPlans()?.splits || [];
   if (!splits.length) return null;
@@ -139,7 +150,7 @@ const jokerMonth = (monday) => { const th = addDays(monday, 3); return `${th.get
 
 /**
  * Gym-Streak in Wochen (Mo–So):
- *  - Woche mit ≥ Wochenziel Einheiten → +1
+ *  - Woche mit ≥ Wochenziel Einheiten → +1 (jede ausgesetzte Einheit senkt das Ziel der Woche um 1, mindestens 1)
  *  - laufende Woche bleibt offen (bricht nichts)
  *  - verpasste Woche → 1 Joker pro Kalendermonat fängt sie ab (Streak bleibt, +0), sonst Reset auf 0
  */
@@ -153,14 +164,15 @@ function computeGymStreak(list = getGymSessions(), now = new Date(), target = we
   let cur = 0, best = 0;
   for (; w <= thisWeek; w = addDays(w, 7)) {
     const k = dayKey(w);
-    const n = sessionsInWeek(k, list).length;
+    const wc = weekCounts(k, list, target);
+    const n = wc.n;
     let status;
-    if (n >= target) { cur++; status = 'done'; }
+    if (n >= wc.target) { cur++; status = 'done'; }
     else if (k === dayKey(thisWeek)) status = 'open';
     else if (cur > 0 && !jokers.has(jokerMonth(w))) { jokers.add(jokerMonth(w)); status = 'joker'; }
     else { cur = 0; status = 'missed'; }
     best = Math.max(best, cur);
-    res.weeks.set(k, { n, status });
+    res.weeks.set(k, { n, status, target: wc.target, skipped: wc.skipped });
   }
   return Object.assign(res, { current: cur, best, jokerUsedThisMonth: jokers.has(jokerMonth(thisWeek)) });
 }
@@ -170,13 +182,12 @@ function gymWeekSummary(from, to) {
   if (!gymPlans()) return null;
   const list = getGymSessions();
   if (!list.length || to < dayKey(weekStart(parseDay(list[0].date)))) return null; // vor der ersten Milon-Einheit
-  const target = weeklyTarget();
-  const st = computeGymStreak(list, new Date(), target);
-  const sessions = list.filter((s) => s.date >= from && s.date <= to)
-    .map((s) => ({ date: s.date, splitName: splitById(s.splitId)?.name || s.splitName || s.splitId }));
-  const status = st.weeks.get(from)?.status || (sessions.length >= target ? 'done' : 'missed');
+  const st = computeGymStreak(list, new Date(), weeklyTarget());
+  const wc = weekCounts(from, list);
+  const sessions = wc.done.map((s) => ({ date: s.date, splitName: splitById(s.splitId)?.name || s.splitName || s.splitId }));
+  const status = st.weeks.get(from)?.status || (wc.n >= wc.target ? 'done' : 'missed');
   const statusLabel = { done: 'Ziel erreicht', joker: 'Joker eingesetzt', missed: 'Ziel verfehlt', open: 'Woche läuft' }[status] || '';
-  return { n: sessions.length, target, sessions, status, statusLabel, streak: st.current, best: st.best };
+  return { n: wc.n, target: wc.target, skipped: wc.skipped, sessions, status, statusLabel, streak: st.current, best: st.best };
 }
 
 /* ---------- Progression ---------- */
@@ -239,13 +250,21 @@ const topValue = (top, ex) => (ex?.bodyweight || !(Number(top?.kg) > 0) ? Number
    ========================================================================= */
 let gymTimer = null;
 function leaveGymPage(r) {
-  if (!(r.name === 'gym' && r.arg === 'log')) { clearInterval(gymTimer); gymTimer = null; }
+  // Sperre nur freigeben, wenn sie von hier kam (der Dehn-Player nutzt dieselbe)
+  if (!(r.name === 'gym' && r.arg === 'log') && gymTimer) { clearInterval(gymTimer); gymTimer = null; releaseWakeLock(); }
 }
+
+/* Bildschirm bleibt an, solange eine neue Einheit erfasst wird (requestWakeLock/releaseWakeLock aus app.js, wie im Player) */
+document.addEventListener('visibilitychange', () => {
+  // iOS/Android geben die Sperre beim Wechsel in den Hintergrund frei – beim Zurückkommen neu anfordern
+  if (document.visibilityState === 'visible' && gymTimer && gymDraft && !gymDraft.sessionId) requestWakeLock();
+});
 
 function renderGymRoute(r) {
   if (!gymPlans()) return renderGymSetup();
   if (r.arg === 'log') return renderGymLog(r.arg2);
   if (r.arg === 'edit') return renderGymLog(null, r.arg2);
+  if (r.arg === 'fertig') return renderGymSummary(r.arg2);
   if (r.arg === 'uebung') return renderGymExercise(r.arg2);
   return renderGym();
 }
@@ -263,28 +282,32 @@ function renderGymSetup() {
 function gymWeekHtml(now = new Date(), { compact = false } = {}) {
   if (!gymPlans()) return '';
   const list = getGymSessions();
-  const wk = weekKey(now);
-  const inWeek = sessionsInWeek(wk, list);
-  const target = weeklyTarget();
+  const wc = weekCounts(weekKey(now), list);
   const next = nextSplit(list);
-  const st = computeGymStreak(list, now, target);
-  const doneToday = inWeek.filter((s) => s.date === dayKey(now));
-  const dots = Array.from({ length: Math.max(target, inWeek.length) }, (_, i) =>
-    `<i class="gw-dot ${i < inWeek.length ? 'on' : ''}" title="${esc(inWeek[i] ? `${fmtDate(inWeek[i].date)} · ${splitById(inWeek[i].splitId)?.name || ''}` : '')}"></i>`).join('');
-  const reached = inWeek.length >= target;
+  const st = computeGymStreak(list, now, weeklyTarget());
+  const today = wc.all.filter((s) => s.date === dayKey(now));
+  const dots = [
+    ...wc.done.map((s) => `<i class="gw-dot on" title="${esc(`${fmtDate(s.date)} · ${splitById(s.splitId)?.name || ''}`)}"></i>`),
+    ...Array.from({ length: Math.max(0, wc.target - wc.n) }, () => '<i class="gw-dot"></i>'),
+    ...wc.all.filter(isSkip).map((s) => `<i class="gw-dot skip" title="${esc(`${fmtDate(s.date)} · ausgesetzt`)}"></i>`),
+  ].join('');
+  const reached = wc.n >= wc.target;
+  const label = (s) => `${esc(fmtDate(s.date))} ${esc(splitById(s.splitId)?.name || s.splitName || '')}${isSkip(s) ? ' ausgesetzt' : s.quick ? '' : ' ✓'}`;
   return `<section class="card gym-week ${reached ? 'is-reached' : ''}">
     <div class="gw-top">
       <div>
         <div class="today-label">Gym diese Woche</div>
-        <div class="gw-count"><strong>${inWeek.length}</strong> von ${target}${reached ? ' <span class="gw-ok">Ziel erreicht</span>' : ''}</div>
+        <div class="gw-count"><strong>${wc.n}</strong> von ${wc.target}${reached ? ' <span class="gw-ok">Ziel erreicht</span>' : ''}</div>
+        ${wc.skipped ? `<div class="small muted">${wc.skipped} ausgesetzt – Ziel diese Woche ${wc.target} statt ${weeklyTarget()}</div>` : ''}
       </div>
       <div class="gw-streak" title="Wochen in Folge mit Wochenziel">${ICONS.tabGym}<span><strong>${st.current}</strong> ${plural(st.current, 'Woche', 'Wochen')}</span></div>
     </div>
     <div class="gw-dots" aria-hidden="true">${dots}</div>
-    ${inWeek.length ? `<p class="small muted gw-list">${inWeek.map((s) => `${esc(fmtDate(s.date))} ${esc(splitById(s.splitId)?.name || s.splitName || '')}${s.quick ? '' : ' ✓'}`).join(' · ')}</p>` : ''}
+    ${wc.all.length ? `<p class="small muted gw-list">${wc.all.map(label).join(' · ')}</p>` : ''}
     ${next ? `<div class="gw-next">
-      <div><span class="muted small">${doneToday.length ? 'Heute erledigt · Als Nächstes' : 'Als Nächstes'}</span><div class="gw-split">${esc(next.name)}</div></div>
+      <div><span class="muted small">${today.some((s) => !isSkip(s)) ? 'Heute erledigt · Als Nächstes' : today.length ? 'Heute ausgesetzt · Als Nächstes' : 'Als Nächstes'}</span><div class="gw-split">${esc(next.name)}</div></div>
       <div class="gw-actions">
+        <button class="btn btn-ghost btn-sm" data-act="gym-skip" data-split="${esc(next.id)}">Aussetzen</button>
         <button class="btn btn-ghost btn-sm" data-act="gym-quick" data-split="${esc(next.id)}">${ICONS.check}<span>Abhaken</span></button>
         <a class="btn btn-primary btn-sm" href="#/gym/log/${encodeURIComponent(next.id)}">Erfassen</a>
       </div>
@@ -305,16 +328,19 @@ function gymStreakHtml(now = new Date()) {
     const w = addDays(thisWeek, -7 * i);
     const k = dayKey(w);
     const info = st.weeks.get(k);
-    const n = info?.n ?? sessionsInWeek(k, list).length;
+    const wc = weekCounts(k, list, target);
+    const n = info?.n ?? wc.n;
+    const t = info?.target ?? wc.target;
     const status = info?.status || (k === dayKey(thisWeek) ? 'open' : 'none');
     const kw = Number(isoWeek(w));
-    cells.push(`<div class="gs-cell st-${status} ${i === 0 ? 'is-now' : ''}" title="KW ${kw}: ${n} von ${target}">
-      <span class="gs-kw">KW ${kw}</span><strong>${n}/${target}</strong></div>`);
+    cells.push(`<div class="gs-cell st-${status} ${i === 0 ? 'is-now' : ''}" title="KW ${kw}: ${n} von ${t}${wc.skipped ? `, ${wc.skipped} ausgesetzt` : ''}">
+      <span class="gs-kw">KW ${kw}</span><strong>${n}/${t}</strong></div>`);
   }
+  const nowWc = weekCounts(dayKey(thisWeek), list, target);
   const msg = !st.startKey ? 'Die Gym-Streak zählt Wochen, in denen du dein Wochenziel erreichst.'
     : st.weeks.get(dayKey(thisWeek))?.status === 'done' ? 'Diese Woche geschafft – die Streak wächst.'
       : st.jokerUsedThisMonth ? 'Achtung: Der Joker für diesen Monat ist schon verbraucht.'
-        : `Noch ${Math.max(0, target - sessionsInWeek(dayKey(thisWeek), list).length)} bis zum Wochenziel.`;
+        : `Noch ${Math.max(0, nowWc.target - nowWc.n)} bis zum Wochenziel${nowWc.skipped ? ` (${nowWc.skipped} ausgesetzt)` : ''}.`;
   return `<section class="card streak gym-streak">
     <div class="streak-head">
       <div class="flame ${st.current > 0 ? 'lit' : ''}">${ICONS.tabGym}</div>
@@ -368,10 +394,13 @@ function renderGym() {
     </section>
     ${recent.length ? `<section class="section">
       <h2 class="section-title">Letzte Einheiten</h2>
-      <ul class="hist-list card gym-hist">${recent.map((s) => `<li>
+      <ul class="hist-list card gym-hist">${recent.map((s) => `<li class="${isSkip(s) ? 'is-skip' : ''}">
         <span class="hist-date">${esc(fmtDate(s.date))}</span>
-        <a class="hist-name" href="#/gym/edit/${encodeURIComponent(s.id)}">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
-          <span class="muted small">${s.quick ? 'abgehakt' : `${(s.exercises || []).length} Übungen`}${s.durationMin ? ` · ${s.durationMin} min` : ''}</span></a>
+        ${isSkip(s) ? `<span class="hist-name">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
+          <span class="muted small">ausgesetzt${s.reason && SKIP_REASONS[s.reason] ? ` · ${esc(SKIP_REASONS[s.reason])}` : ''}</span></span>
+          <button class="btn btn-ghost btn-sm" data-act="gym-unskip" data-id="${esc(s.id)}">Zurücknehmen</button>`
+        : `<a class="hist-name" href="#/gym/edit/${encodeURIComponent(s.id)}">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
+          <span class="muted small">${s.quick ? 'abgehakt' : `${(s.exercises || []).length} Übungen`}${s.durationMin ? ` · ${s.durationMin} min` : ''}</span></a>`}
       </li>`).join('')}</ul>
     </section>` : ''}
     <section class="section">
@@ -428,7 +457,7 @@ function draftFromSession(s) {
   const exercises = {};
   for (const ex of sp?.exercises || []) {
     const logged = (s.exercises || []).find((e) => e.exerciseId === ex.id);
-    exercises[ex.id] = { sets: logged ? logged.sets.map((x) => ({ kg: x.kg ?? '', reps: x.reps ?? '', done: true })) : prefillSets(ex) };
+    exercises[ex.id] = { sets: logged ? logged.sets.map((x) => ({ kg: x.kg ?? '', reps: x.reps ?? '', done: true, at: x.at ? Date.parse(x.at) || null : null })) : prefillSets(ex) };
   }
   return { splitId: s.splitId, sessionId: s.id, date: s.date, startedAt: null, durationMin: s.durationMin ?? null, note: s.note || '', exercises, showMore: false, quick: !!s.quick, createdAt: s.createdAt };
 }
@@ -457,7 +486,7 @@ function clearDraft() {
 function renderGymLog(splitId, sessionId = null) {
   if (sessionId) {
     const s = getGymSessions().find((x) => x.id === sessionId);
-    if (!s || !splitById(s.splitId)) { redirect('#/gym'); return; }
+    if (!s || isSkip(s) || !splitById(s.splitId)) { redirect('#/gym'); return; }
     if (!gymDraft || gymDraft.sessionId !== sessionId) gymDraft = draftFromSession(s);
   } else {
     if (!splitById(splitId)) { redirect('#/gym'); return; }
@@ -469,7 +498,48 @@ function renderGymLog(splitId, sessionId = null) {
   }
   drawGymLog();
   clearInterval(gymTimer);
-  if (!gymDraft.sessionId) gymTimer = setInterval(updateGymClock, 15000);
+  if (!gymDraft.sessionId) { gymTimer = setInterval(updateGymClock, 1000); requestWakeLock(); }
+}
+
+/** Abgehakte Sätze des Entwurfs mit Uhrzeit, zeitlich sortiert. */
+function draftSetTimes(d = gymDraft) {
+  const out = [];
+  for (const [exId, e] of Object.entries(d?.exercises || {})) {
+    (e.sets || []).forEach((s) => { if (s.done && s.at) out.push({ exId, at: s.at }); });
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+const fmtElapsed = (sec) => `${Math.floor(sec / 60)}:${pad2(Math.floor(sec % 60))}`; // abgerundet (fmtClock in app.js rundet auf)
+
+/**
+ * Übung, die als Nächstes dran ist: die erste (sichtbare) Übung mit offenen Sätzen.
+ * Im Supersatz abwechselnd: die Übung der Gruppe mit den wenigsten erledigten Sätzen (A1 → A2 → A1 …).
+ */
+function focusExercise(groups) {
+  const d = gymDraft;
+  for (const g of groups) {
+    const open = g.items.filter((ex) => ex.block !== 'alt' && (d.exercises[ex.id]?.sets || []).some((s) => !s.done));
+    if (!open.length) continue;
+    const doneCount = (ex) => (d.exercises[ex.id]?.sets || []).filter((s) => s.done).length;
+    return open.reduce((a, b) => (doneCount(b) < doneCount(a) ? b : a)).id;
+  }
+  return null;
+}
+let gymFocusId = null;
+
+/** Leiste unten: Zeit seit dem letzten Satz, verglichen mit der geplanten Pause der Übung. */
+function restBarHtml() {
+  const times = draftSetTimes();
+  if (!times.length) return '<div class="gl-rest" id="gl-rest"><span class="muted">Haken bei einem Satz startet die Pausenuhr</span></div>';
+  const last = times[times.length - 1];
+  const sec = Math.max(0, (Date.now() - last.at) / 1000);
+  const restSec = Number(splitById(gymDraft.splitId)?.exercises.find((e) => e.id === last.exId)?.restSec) || 0;
+  const ready = restSec && sec >= restSec;
+  const pct = restSec ? Math.min(100, (sec / restSec) * 100) : 0;
+  return `<div class="gl-rest ${ready ? 'is-ready' : ''}" id="gl-rest">
+    <span>Letzter Satz vor <strong>${fmtElapsed(sec)}</strong></span>
+    ${restSec ? `<span class="gl-rest-plan">${ready ? 'Pause um · weiter' : `Pause ${fmtElapsed(restSec)}`}</span><i class="gl-rest-bar" style="width:${pct.toFixed(1)}%"></i>` : ''}
+  </div>`;
 }
 
 function drawGymLog() {
@@ -484,6 +554,7 @@ function drawGymLog() {
     else groups.push({ block: ex.block, items: [ex] });
   }
   const hiddenCount = sp.exercises.filter((ex) => COLLAPSED_BLOCKS.includes(ex.block)).length;
+  gymFocusId = d.sessionId ? null : focusExercise(groups); // beim Bearbeiten alter Einheiten kein Fokus
   app.innerHTML = `<div class="page page-gymlog">
     ${topbar({ backHref: '#/gym', title: esc(d.sessionId ? 'Einheit bearbeiten' : 'Einheit erfassen') })}
     <h1 class="ov-title">${esc(sp.name)}</h1>
@@ -499,7 +570,10 @@ function drawGymLog() {
     ${hiddenCount && !d.showMore ? `<button class="btn btn-ghost gl-more" data-act="gym-more">Optional und Ersatz anzeigen (${hiddenCount})</button>` : ''}
     <label class="gl-note">Notiz<textarea data-gym-field="note" rows="2" placeholder="z. B. wie es lief, Technik, Gefühl">${esc(d.note)}</textarea></label>
     ${d.sessionId ? `<button class="btn btn-ghost gl-delete" data-act="gym-delete">${ICONS.trash}<span>Einheit löschen</span></button>` : ''}
-    <div class="start-bar"><button class="btn btn-primary btn-xl" data-act="gym-save">${ICONS.check}<span>Speichern</span></button></div>
+    <div class="start-bar">
+      ${d.sessionId ? '' : restBarHtml()}
+      <button class="btn btn-primary btn-xl" data-act="gym-save">${ICONS.check}<span>Speichern</span></button>
+    </div>
   </div>`;
 }
 function exerciseLogHtml(ex) {
@@ -508,10 +582,13 @@ function exerciseLogHtml(ex) {
   const st = exerciseStats(ex.id);
   const hint = progressionHint(ex, st);
   const unit = exUnit(ex) === 's' ? 's' : 'Wdh.';
-  return `<article class="gl-ex" data-ex="${esc(ex.id)}">
+  const isFocus = gymFocusId === ex.id;
+  const complete = !d.sessionId && sets.length && sets.every((s) => s.done);
+  return `<article class="gl-ex ${isFocus ? 'is-focus' : ''} ${complete ? 'is-complete' : ''}" data-ex="${esc(ex.id)}">
     <div class="gl-ex-head">
       <div>
-        <div class="gl-ex-name">${esc(ex.name)}</div>
+        ${isFocus ? '<div class="gl-now">Jetzt dran</div>' : ''}
+        <div class="gl-ex-name">${complete ? `${ICONS.check} ` : ''}${esc(ex.name)}</div>
         <div class="small muted">${esc(planDose(ex))}${ex.restSec ? ` · Pause ${Math.floor(ex.restSec / 60)}:${pad2(ex.restSec % 60)}` : ''}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-act="gym-all-done" data-ex="${esc(ex.id)}">Alle ✓</button>
@@ -533,14 +610,18 @@ function exerciseLogHtml(ex) {
     </div>
   </article>`;
 }
+/** Dauer ab dem ersten abgehakten Satz (vorher läuft noch nichts). */
 function gymClockText() {
   if (!gymDraft?.startedAt) return '';
-  const min = Math.max(0, Math.round((Date.now() - gymDraft.startedAt) / 60000));
-  return `läuft seit ${min} min`;
+  const first = draftSetTimes()[0];
+  if (!first) return 'noch nicht begonnen';
+  return `läuft seit ${Math.max(0, Math.floor((Date.now() - first.at) / 60000))} min`;
 }
 function updateGymClock() {
   const el = document.getElementById('gl-clock');
   if (el) el.textContent = gymClockText();
+  const bar = document.getElementById('gl-rest');
+  if (bar) bar.outerHTML = restBarHtml();
 }
 
 /** Eingaben auf der Erfassen-Seite übernehmen (ohne Neuzeichnen, damit der Fokus bleibt). */
@@ -554,19 +635,10 @@ app.addEventListener('input', (e) => {
     const set = gymDraft.exercises[e.target.dataset.ex]?.sets[Number(e.target.dataset.set)];
     if (!set) return;
     const raw = e.target.value.trim().replace(',', '.');
-    set[f] = raw === '' ? '' : raw;
-    if (!set.done && raw !== '') { set.done = true; markSetUi(e.target.dataset.ex, Number(e.target.dataset.set)); } // Eintippen = Satz gemacht
+    set[f] = raw === '' ? '' : raw; // abgehakt wird nur per Haken – sonst stimmt die Pausenuhr nicht
   }
   saveDraft();
 });
-function markSetUi(exId, i) {
-  const row = app.querySelector(`.gl-ex[data-ex="${CSS.escape(exId)}"] .gl-set:nth-child(${i + 1})`);
-  if (!row) return;
-  row.classList.add('is-done');
-  const b = row.querySelector('.gl-check');
-  b.innerHTML = ICONS.check;
-  b.setAttribute('aria-pressed', 'true');
-}
 
 function toNum(v) { const n = Number(String(v ?? '').replace(',', '.')); return v === '' || v == null || !Number.isFinite(n) ? null : n; }
 
@@ -585,14 +657,41 @@ async function handleGymAction(act, el) {
       rerenderCurrent();
       break;
     }
+    case 'gym-skip': {
+      const sp = splitById(el.dataset.split);
+      if (!sp) return;
+      const reason = await skipModal(sp);
+      if (!reason) return;
+      const now = new Date().toISOString();
+      saveGymSession({ id: genId(), date: todayKey(), splitId: sp.id, splitName: sp.name, skipped: true, reason, quick: true, durationMin: null, note: '', exercises: [], createdAt: now, updatedAt: now });
+      toast(`${sp.name} ausgesetzt – als Nächstes: ${nextSplit()?.name || ''}`);
+      rerenderCurrent();
+      break;
+    }
+    case 'gym-unskip': {
+      const s = getGymSessions().find((x) => x.id === el.dataset.id);
+      if (!s) return;
+      const ok = await confirmModal({ title: 'Aussetzen zurücknehmen?', text: `${s.splitName || ''} am ${fmtDate(s.date)} – das Wochenziel gilt dann wieder voll.`, ok: 'Zurücknehmen' });
+      if (!ok) return;
+      deleteGymSession(s.id);
+      rerenderCurrent();
+      break;
+    }
     case 'gym-set-done': {
       const s = ex?.sets[Number(el.dataset.set)];
       if (!s) return;
       s.done = !s.done;
+      s.at = s.done ? Date.now() : null;
+      const before = gymFocusId;
       saveDraft(); drawGymLogKeepScroll();
+      if (s.done && gymFocusId && gymFocusId !== before) scrollToFocus();
       break;
     }
-    case 'gym-all-done': if (ex) { ex.sets.forEach((s) => { s.done = true; }); saveDraft(); drawGymLogKeepScroll(); } break;
+    case 'gym-all-done': if (ex) {
+      const now = Date.now();
+      ex.sets.forEach((s) => { if (!s.done) { s.done = true; s.at = now; } });
+      saveDraft(); drawGymLogKeepScroll(); if (gymFocusId) scrollToFocus();
+    } break;
     case 'gym-add-set': if (ex) { const l = ex.sets[ex.sets.length - 1] || { kg: '', reps: '' }; ex.sets.push({ kg: l.kg, reps: l.reps, done: false }); saveDraft(); drawGymLogKeepScroll(); } break;
     case 'gym-del-set': if (ex && ex.sets.length > 1) { ex.sets.pop(); saveDraft(); drawGymLogKeepScroll(); } break;
     case 'gym-more': gymDraft.showMore = true; saveDraft(); drawGymLogKeepScroll(); break;
@@ -609,6 +708,38 @@ async function handleGymAction(act, el) {
   }
 }
 function drawGymLogKeepScroll() { const y = window.scrollY; drawGymLog(); window.scrollTo(0, y); }
+function scrollToFocus() {
+  const el = app.querySelector('.gl-ex.is-focus');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/** Aussetzen: Grund wählen. Gibt den Schlüssel aus SKIP_REASONS zurück oder null. */
+function skipModal(sp) {
+  const wc = weekCounts(weekKey(new Date()));
+  const after = Math.max(1, weeklyTarget() - wc.skipped - 1);
+  const splits = gymPlans()?.splits || [];
+  const following = splits[(splits.findIndex((s) => s.id === sp.id) + 1) % splits.length];
+  return new Promise((resolve) => {
+    modalRoot.innerHTML = `<div class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+        <h2 id="m-title">${esc(sp.name)} aussetzen?</h2>
+        <p>Zählt nicht als Einheit, senkt aber dein Wochenziel diese Woche auf ${after}. Die Streak bleibt erhalten.
+        ${following && following.id !== sp.id ? `Als Nächstes kommt dann ${esc(following.name)}.` : ''}</p>
+        <div class="skip-reasons">${Object.entries(SKIP_REASONS).map(([k, v]) => `<button class="btn btn-ghost" data-r="${k}">${esc(v)}</button>`).join('')}</div>
+        <div class="modal-actions single"><button class="btn btn-ghost" data-r="">Abbrechen</button></div>
+      </div>
+    </div>`;
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(null); } };
+    const close = (v) => { modalRoot.innerHTML = ''; document.removeEventListener('keydown', onKey, true); resolve(v); };
+    modalRoot.querySelector('.modal-backdrop').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-r]');
+      if (b) close(b.dataset.r || null);
+      else if (e.target.classList.contains('modal-backdrop')) close(null);
+    });
+    document.addEventListener('keydown', onKey, true);
+    modalRoot.querySelector('[data-r=""]').focus();
+  });
+}
 
 async function saveGymDraft() {
   const d = gymDraft;
@@ -616,7 +747,7 @@ async function saveGymDraft() {
   const exercises = [];
   for (const exPlan of sp.exercises) {
     const sets = (d.exercises[exPlan.id]?.sets || []).filter((s) => s.done)
-      .map((s) => ({ kg: exPlan.bodyweight ? null : toNum(s.kg), reps: toNum(s.reps) }))
+      .map((s) => ({ kg: exPlan.bodyweight ? null : toNum(s.kg), reps: toNum(s.reps), ...(s.at ? { at: new Date(s.at).toISOString() } : {}) }))
       .filter((s) => s.reps != null || s.kg != null);
     if (sets.length) exercises.push({ exerciseId: exPlan.id, name: exPlan.name, sets });
   }
@@ -625,8 +756,11 @@ async function saveGymDraft() {
     if (!ok) return;
   }
   const now = new Date().toISOString();
+  // Dauer: eingetragen > vom ersten bis zum letzten abgehakten Satz > seit Öffnen der Seite
+  const times = draftSetTimes(d);
   const duration = d.durationMin != null && d.durationMin !== '' ? Number(d.durationMin)
-    : d.startedAt ? Math.max(1, Math.round((Date.now() - d.startedAt) / 60000)) : null;
+    : times.length > 1 ? Math.max(1, Math.round((times[times.length - 1].at - times[0].at) / 60000))
+      : d.startedAt ? Math.max(1, Math.round((Date.now() - d.startedAt) / 60000)) : null;
   const session = {
     id: d.sessionId || genId(),
     date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : todayKey(),
@@ -641,8 +775,65 @@ async function saveGymDraft() {
   saveGymSession(session);
   const wasEdit = !!d.sessionId;
   if (!wasEdit) clearDraft(); else gymDraft = null;
-  toast(wasEdit ? 'Einheit aktualisiert.' : `Gespeichert: ${sp.name}${duration ? ` · ${duration} min` : ''}`);
-  location.hash = '#/gym';
+  if (wasEdit || !exercises.length) {
+    toast(wasEdit ? 'Einheit aktualisiert.' : `Gespeichert: ${sp.name}${duration ? ` · ${duration} min` : ''}`);
+    location.hash = '#/gym';
+  } else location.hash = `#/gym/fertig/${encodeURIComponent(session.id)}`;
+}
+
+/* ---------- Abschluss-Übersicht nach dem Speichern ---------- */
+function renderGymSummary(sessionId) {
+  const list = getGymSessions();
+  const s = list.find((x) => x.id === sessionId);
+  if (!s) { redirect('#/gym'); return; }
+  const before = list.filter((x) => x.id !== s.id && (x.date < s.date || (x.date === s.date && String(x.createdAt) < String(s.createdAt))));
+  let nSets = 0, volume = 0;
+  const bests = [], next = [];
+  const times = [];
+  for (const e of s.exercises || []) {
+    const ex = planExercise(e.exerciseId, s.splitId);
+    nSets += e.sets.length;
+    for (const st of e.sets) {
+      if (exUnit(ex) !== 's' && Number(st.kg) > 0 && Number(st.reps) > 0) volume += Number(st.kg) * Number(st.reps);
+      if (st.at) times.push(Date.parse(st.at));
+    }
+    if (!isTracked(ex)) continue;
+    const prev = exerciseHistory(e.exerciseId, before).flatMap((h) => h.sets);
+    const top = topSet(e.sets);
+    const prevBest = prev.reduce((b, x) => (!b || setScore(x) > setScore(b) ? x : b), null);
+    if (top && prevBest && setScore(top) > setScore(prevBest)) bests.push({ ex, top, prevBest });
+    const hint = progressionHint(ex, exerciseStats(e.exerciseId));
+    if (hint) next.push({ ex, hint });
+  }
+  times.sort((a, b) => a - b);
+  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 1000).filter((g) => g > 5 && g < 900);
+  const avgRest = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null;
+  const st = computeGymStreak();
+  const wc = weekCounts(weekKey(parseDay(s.date)));
+  app.innerHTML = `<div class="page page-gymdone">
+    ${topbar({ backHref: '#/gym', title: '' })}
+    <div class="gs-done-head">
+      <div class="gs-done-icon">${ICONS.check}</div>
+      <h1 class="ov-title">${esc(splitById(s.splitId)?.name || s.splitName || '')} geschafft</h1>
+      <p class="muted">${esc(fmtDate(s.date))} · Woche ${wc.n} von ${wc.target}${wc.n >= wc.target ? ' – Ziel erreicht' : ''} · Streak ${st.current} ${plural(st.current, 'Woche', 'Wochen')}</p>
+    </div>
+    <section class="card gs-stats">
+      <div><span class="muted small">Dauer</span><strong>${s.durationMin ? `${s.durationMin} min` : '–'}</strong></div>
+      <div><span class="muted small">Sätze</span><strong>${nSets}</strong></div>
+      <div><span class="muted small">Volumen</span><strong>${volume ? `${Math.round(volume).toLocaleString('de-DE')} kg` : '–'}</strong></div>
+      <div><span class="muted small">Ø Pause</span><strong>${avgRest ? fmtElapsed(avgRest) : '–'}</strong></div>
+    </section>
+    ${bests.length ? `<section class="card">
+      <h2 class="card-title">Neue Bestwerte</h2>
+      <ul class="gs-list">${bests.map((b) => `<li><span class="gs-best">${ICONS.flame}</span><span><strong>${esc(b.ex.name)}</strong>: ${esc(fmtSet(b.top, b.ex))} <span class="muted small">(vorher ${esc(fmtSet(b.prevBest, b.ex))})</span></span></li>`).join('')}</ul>
+    </section>` : ''}
+    ${next.length ? `<section class="card">
+      <h2 class="card-title">Nächstes Mal steigern</h2>
+      <ul class="gs-list">${next.map((n) => `<li><span class="gs-up">↑</span><span><strong>${esc(n.ex.name)}</strong>: ${esc(n.hint)}</span></li>`).join('')}</ul>
+    </section>` : ''}
+    ${!bests.length && !next.length ? '<p class="small muted">Keine neuen Bestwerte und noch kein Signal zum Steigern – sauber weitermachen.</p>' : ''}
+    <div class="start-bar"><a class="btn btn-primary btn-xl" href="#/gym">Fertig</a></div>
+  </div>`;
 }
 
 /* ---------- Übung im Detail ---------- */
