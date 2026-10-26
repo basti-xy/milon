@@ -4,6 +4,7 @@
    Milon – Werte (Leistungs- und Körperwerte)
    Quelle: training/values.json im privaten Daten-Repository (von Hand gepflegt, App liest nur).
    Pro Wert eine Liste von Messungen; die letzte gilt als aktuell, ab zwei Einträgen gibt es einen Verlauf.
+   Gruppen mit "pr": true sind Bestwerte: statt Trendpfeil steht die Verbesserung zum vorherigen PR daneben.
    ========================================================================= */
 
 const VALUES_PATH = 'training/values.json';
@@ -59,10 +60,45 @@ function trendHtml(item, entries) {
   return `<span class="${cls}" title="ggü. ${esc(fmtValue(item, entries[entries.length - 2].value))}">${up ? '↑' : '↓'}</span>`;
 }
 
+/** Datum eines Eintrags als Zeitstempel (JJJJ-MM → Monatsmitte), sonst null. */
+function entryTime(e) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(e?.date || '')) return parseDay(e.date).getTime();
+  if (/^\d{4}-\d{2}$/.test(e?.date || '')) { const [y, m] = e.date.split('-').map(Number); return new Date(y, m - 1, 15).getTime(); }
+  return null;
+}
+/**
+ * Verlaufslinie mit den echten Werten (Zeiten sinken, Watt steigen).
+ * Waagerecht nach Datum, wenn alle Einträge eins haben – lange Pausen sieht man als lange Strecke.
+ */
+function valueLine(item, entries, { w = 96, h = 28 } = {}) {
+  const pts = entries.map((e) => ({ x: entryTime(e), y: valueToNumber(item, e.value) })).filter((p) => Number.isFinite(p.y));
+  if (pts.length < 2) return '';
+  if (!pts.every((p) => p.x != null)) pts.forEach((p, i) => { p.x = i; });
+  const x0 = pts[0].x, xs = (pts[pts.length - 1].x - x0) || 1;
+  const ys = pts.map((p) => p.y), lo = Math.min(...ys), span = (Math.max(...ys) - lo) || 1;
+  const xy = pts.map((p) => [2 + ((p.x - x0) / xs) * (w - 4), h - 3 - ((p.y - lo) / span) * (h - 6)]);
+  const [lx, ly] = xy[xy.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
+    <polyline points="${xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${xy.slice(0, -1).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="currentColor" opacity=".55"/>`).join('')}
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.6" fill="currentColor"/></svg>`;
+}
+/** Verbesserung ggü. dem vorherigen Eintrag: "−0:42", "−9:24", "+18 W". */
+function deltaText(item, entries) {
+  if (entries.length < 2) return '';
+  const a = valueToNumber(item, entries[entries.length - 2].value);
+  const b = valueToNumber(item, entries[entries.length - 1].value);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return '';
+  const d = b - a, sign = d < 0 ? '−' : '+';
+  if (item.kind === 'number') return `${sign}${Math.abs(d).toLocaleString('de-DE', { maximumFractionDigits: 1 })}${item.unit ? ` ${item.unit}` : ''}`;
+  const s = Math.round(Math.abs(d));
+  return `${sign}${s >= 3600 ? `${Math.floor(s / 3600)}:${pad2(Math.floor((s % 3600) / 60))}:${pad2(s % 60)}` : `${Math.floor(s / 60)}:${pad2(s % 60)}`}`;
+}
+
 /** "Wettkampf · Anmerkung" eines Eintrags (event ist optional). */
 const entryInfo = (e) => [e.event, e.note].filter(Boolean).join(' · ');
 
-function valueItemHtml(item) {
+function valueItemHtml(item, group = {}) {
   const entries = Array.isArray(item.entries) ? item.entries : [];
   const cur = entries[entries.length - 1];
   if (!cur) {
@@ -71,9 +107,8 @@ function valueItemHtml(item) {
       <div class="val-value"><span class="pill">offen</span></div>
     </div>`;
   }
-  const nums = entries.map((e) => valueToNumber(item, e.value));
-  // Bei Zeiten/Pace ist "niedriger besser": Kurve umdrehen, damit "besser" oben liegt
-  const spark = entries.length > 1 ? sparkline(item.better === 'lower' ? nums.map((n) => -n) : nums) : '';
+  const spark = valueLine(item, entries);
+  const delta = group.pr ? deltaText(item, entries) : '';
   return `<details class="val-row" ${entries.length > 1 ? '' : 'data-single'}>
     <summary>
       <div class="val-main">
@@ -81,7 +116,7 @@ function valueItemHtml(item) {
         <div class="small muted">${cur.date ? `Stand ${esc(fmtStand(cur.date))}` : 'aktuell'}${(entries.length > 1 ? cur.event : entryInfo(cur)) ? ` · ${esc(entries.length > 1 ? cur.event : entryInfo(cur))}` : ''}</div>
       </div>
       ${spark ? `<div class="val-spark">${spark}</div>` : ''}
-      <div class="val-value"><strong>${esc(fmtValue(item, cur.value))}</strong> <span class="muted">${esc(item.unit || '')}</span>${trendHtml(item, entries)}</div>
+      <div class="val-value"><strong>${esc(fmtValue(item, cur.value))}</strong> <span class="muted">${esc(item.unit || '')}</span>${group.pr ? '' : trendHtml(item, entries)}${delta ? `<div class="val-delta" title="Verbesserung ggü. dem vorherigen PR">${esc(delta)}</div>` : ''}</div>
     </summary>
     ${entries.length > 1 ? `<ul class="hist-list val-hist">${[...entries].reverse().map((e) => `<li>
       <span class="hist-date">${esc(fmtStand(e.date))}</span>
@@ -96,7 +131,7 @@ function renderWerte() {
     ${pageHead({ title: 'Werte' })}
     ${d ? d.groups.map((g) => `<section class="card values-group">
       <div class="today-label">${esc(g.name)}</div>
-      ${(g.items || []).map(valueItemHtml).join('')}
+      ${(g.items || []).map((it) => valueItemHtml(it, g)).join('')}
     </section>`).join('') : `<section class="card">
       <h2 class="card-title">Noch keine Werte</h2>
       <p class="small muted">Lege <code>${VALUES_PATH}</code> in deinem Daten-Repository an.

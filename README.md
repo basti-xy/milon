@@ -45,7 +45,7 @@ Bestehende localStorage-Schlüssel (`dehnapp.*`) und Dateinamen im Daten-Reposit
 | `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
 | `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen). Sätze mit `at` (Uhrzeit des Abhakens); ausgesetzte Einheiten mit `skipped: true` und `reason` |
 | `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) und `next` = Vorschau auf die nächste Woche aus dem Trainingsplan (Einheiten pro Tag, Abweichungen vom Original) – App liest nur |
-| `training/values.json` | ✓ | | Werte: `groups[].items[]` mit `unit`, `kind` (`number`/`pace`/`time`), `better`, `entries[]` (`date`, optional `event` = Wettkampf/Einheit und `note`) |
+| `training/values.json` | ✓ | | Werte: `groups[].items[]` mit `unit`, `kind` (`number`/`pace`/`time`), `better`, `entries[]` (`date`, optional `event` = Wettkampf/Einheit und `note`); Gruppe mit `pr: true` = Bestwerte (Verbesserung statt Trendpfeil). Linie mit echten Werten, waagerecht nach Datum |
 
 Die Ansagen werden wie die Countdown-Töne über Web Audio abgespielt. Auf iPhone/iPad gibt es im Player einen
 Ton-Schalter: *Ton an* = hörbar auch im Stummmodus (ein Video im Bild-in-Bild hält dabei an), *Ton aus* = die App

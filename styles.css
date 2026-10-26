@@ -645,5 +645,6 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .val-name { font-weight: 650; }
 .val-spark { flex: none; color: var(--accent); }
 .val-value { flex: none; text-align: right; white-space: nowrap; }
+.val-delta { font-size: .8rem; font-weight: 700; color: var(--good); font-variant-numeric: tabular-nums; }
 .val-value strong { font-size: 1.35rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .val-hist { margin: 0 0 10px; padding: 0 0 0 4px; }
