@@ -498,7 +498,11 @@ function renderGymLog(splitId, sessionId = null) {
   }
   drawGymLog();
   clearInterval(gymTimer);
-  if (!gymDraft.sessionId) { gymTimer = setInterval(updateGymClock, 1000); requestWakeLock(); }
+  if (!gymDraft.sessionId) {
+    gymTimer = setInterval(updateGymClock, 1000);
+    requestWakeLock();
+    if (gymRaf == null) restBarLoop();
+  }
 }
 
 /** Abgehakte Sätze des Entwurfs mit Uhrzeit, zeitlich sortiert. */
@@ -527,19 +531,50 @@ function focusExercise(groups) {
 }
 let gymFocusId = null;
 
-/** Leiste unten: Zeit seit dem letzten Satz, verglichen mit der geplanten Pause der Übung. */
+/** Offene Sätze der Einheit. Optional und Ersatz zählen erst, wenn dort ein Satz abgehakt ist. */
+function setsLeft() {
+  const d = gymDraft;
+  let total = 0, done = 0;
+  for (const ex of splitById(d.splitId)?.exercises || []) {
+    const sets = d.exercises[ex.id]?.sets || [];
+    const n = sets.filter((s) => s.done).length;
+    if (COLLAPSED_BLOCKS.includes(ex.block) && !n) continue;
+    total += sets.length;
+    done += n;
+  }
+  return { total, left: total - done };
+}
+
+/* Leiste unten: offene Sätze, Zeit seit dem letzten Satz, Restpause. Das Gerüst steht fest,
+   updateRestBar() füllt es bei jedem Bildaufbau – so läuft der Balken flüssig statt im Sekundentakt. */
 function restBarHtml() {
-  const times = draftSetTimes();
-  if (!times.length) return '<div class="gl-rest" id="gl-rest"><span class="muted">Haken bei einem Satz startet die Pausenuhr</span></div>';
-  const last = times[times.length - 1];
-  const sec = Math.max(0, (Date.now() - last.at) / 1000);
-  const restSec = Number(splitById(gymDraft.splitId)?.exercises.find((e) => e.id === last.exId)?.restSec) || 0;
-  const ready = restSec && sec >= restSec;
-  const pct = restSec ? Math.min(100, (sec / restSec) * 100) : 0;
-  return `<div class="gl-rest ${ready ? 'is-ready' : ''}" id="gl-rest">
-    <span>Letzter Satz vor <strong>${fmtElapsed(sec)}</strong></span>
-    ${restSec ? `<span class="gl-rest-plan">${ready ? 'Pause um · weiter' : `Pause ${fmtElapsed(restSec)}`}</span><i class="gl-rest-bar" style="width:${pct.toFixed(1)}%"></i>` : ''}
+  const { total, left } = setsLeft();
+  return `<div class="gl-rest" id="gl-rest">
+    <div class="gl-rest-sets">${left ? `Noch <strong>${left}</strong> von ${total} Sätzen` : 'Alle Sätze geschafft'}</div>
+    <div class="gl-rest-row"><span><span id="gl-rest-label"></span><strong id="gl-rest-since"></strong></span><span class="gl-rest-plan" id="gl-rest-plan"></span></div>
+    <i class="gl-rest-bar" id="gl-rest-bar"></i>
   </div>`;
+}
+function updateRestBar() {
+  const box = document.getElementById('gl-rest');
+  if (!box) return;
+  const put = (id, text) => { const el = document.getElementById(id); if (el.textContent !== text) el.textContent = text; };
+  const times = draftSetTimes();
+  const last = times[times.length - 1];
+  const sec = last ? Math.max(0, (Date.now() - last.at) / 1000) : 0;
+  const restSec = last ? Number(splitById(gymDraft.splitId)?.exercises.find((e) => e.id === last.exId)?.restSec) || 0 : 0;
+  const ready = restSec > 0 && sec >= restSec;
+  put('gl-rest-label', last ? 'Letzter Satz vor ' : 'Haken bei einem Satz startet die Pausenuhr');
+  put('gl-rest-since', last ? fmtElapsed(sec) : '');
+  put('gl-rest-plan', ready ? 'Pause um · weiter' : restSec ? `noch ${fmtElapsed(Math.ceil(restSec - sec))} von ${fmtElapsed(restSec)}` : '');
+  box.classList.toggle('is-ready', ready);
+  document.getElementById('gl-rest-bar').style.transform = `scaleX(${restSec ? Math.min(1, sec / restSec).toFixed(4) : 0})`;
+}
+let gymRaf = null;
+function restBarLoop() {
+  if (!gymTimer) { gymRaf = null; return; } // Seite verlassen
+  updateRestBar();
+  gymRaf = requestAnimationFrame(restBarLoop);
 }
 
 function drawGymLog() {
@@ -575,6 +610,7 @@ function drawGymLog() {
       <button class="btn btn-primary btn-xl" data-act="gym-save">${ICONS.check}<span>Speichern</span></button>
     </div>
   </div>`;
+  updateRestBar();
 }
 function exerciseLogHtml(ex) {
   const d = gymDraft;
@@ -620,9 +656,21 @@ function gymClockText() {
 function updateGymClock() {
   const el = document.getElementById('gl-clock');
   if (el) el.textContent = gymClockText();
-  const bar = document.getElementById('gl-rest');
-  if (bar) bar.outerHTML = restBarHtml();
 }
+
+/* Gewicht/Wdh.: Die erste Eingabe nach dem Antippen ersetzt die alte Zahl. Ohne Eingabe bleibt sie stehen.
+   select() allein reicht nicht, weil iOS die Markierung beim Antippen oft wieder aufhebt. */
+const isSetField = (el) => el?.dataset?.gymField === 'kg' || el?.dataset?.gymField === 'reps';
+app.addEventListener('focusin', (e) => {
+  if (!isSetField(e.target)) return;
+  e.target.dataset.fresh = '1';
+  e.target.select();
+});
+app.addEventListener('beforeinput', (e) => {
+  if (!isSetField(e.target) || !e.target.dataset.fresh) return;
+  delete e.target.dataset.fresh;
+  if (e.inputType?.startsWith('insert')) e.target.value = '';
+});
 
 /** Eingaben auf der Erfassen-Seite übernehmen (ohne Neuzeichnen, damit der Fokus bleibt). */
 app.addEventListener('input', (e) => {

@@ -15,7 +15,7 @@ Hier liegt nur der Programmcode.
 | Tab | Inhalt |
 |---|---|
 | **Heute** | Dehn-Aufgabe des Tages, Gym-Status der Woche mit nächstem Split, Karte *Trainingswoche* |
-| **Gym** | Wochenziel, Gym-Streak mit Kalender, Splits (abhaken, aussetzen oder ausführlich erfassen), letzte Einheiten, Progression pro Übung. Beim Erfassen: Satz per Haken (mit Uhrzeit), Pausenuhr unten, „Jetzt dran“-Fokus (Supersätze abwechselnd), Bildschirm bleibt an, danach Abschluss-Übersicht (Dauer, Volumen, Ø Pause, neue Bestwerte, nächstes Mal steigern) |
+| **Gym** | Wochenziel, Gym-Streak mit Kalender, Splits (abhaken, aussetzen oder ausführlich erfassen), letzte Einheiten, Progression pro Übung. Beim Erfassen: Satz per Haken (mit Uhrzeit), Leiste unten mit offenen Sätzen, Restpause und flüssig laufendem Balken; die erste Eingabe in Gewicht/Wdh. ersetzt die alte Zahl, „Jetzt dran“-Fokus (Supersätze abwechselnd), Bildschirm bleibt an, danach Abschluss-Übersicht (Dauer, Volumen, Ø Pause, neue Bestwerte, nächstes Mal steigern) |
 | **Dehnen** | Dehn-Streak mit Kalender, Wochen-Routine, alle Routinen, Player mit Timer und Sprachansagen |
 | **Werte** | Leistungs- und Körperwerte mit Stand-Datum und Verlauf |
 

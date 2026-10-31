@@ -532,7 +532,7 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ex-stats > div { display: flex; flex-direction: column; gap: 2px; }
 .ex-chart { margin-top: 14px; }
 
-.page-gymlog { padding-bottom: calc(170px + var(--safe-bottom)); }
+.page-gymlog { padding-bottom: calc(200px + var(--safe-bottom)); }
 .gl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 16px; color: var(--muted); font-size: .9rem; }
 .gl-meta label { display: inline-flex; align-items: center; gap: 6px; }
 .gl-meta input { min-height: 38px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; }
@@ -565,12 +565,14 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .gl-ex.is-complete .gl-ex-name .ico { color: var(--good); width: 1em; height: 1em; vertical-align: -2px; }
 .gl-now { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: var(--accent); margin-bottom: 2px; }
 /* Pausenuhr unten */
-.gl-rest { position: relative; overflow: hidden; max-width: 608px; margin: 0 auto 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  padding: 10px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); font-size: .95rem; font-variant-numeric: tabular-nums; }
-.gl-rest strong { font-size: 1.15rem; }
-.gl-rest-plan { color: var(--muted); font-size: .85rem; position: relative; }
-.gl-rest > span { position: relative; z-index: 1; }
-.gl-rest-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width 1s linear; }
+.gl-rest { position: relative; overflow: hidden; max-width: 608px; margin: 0 auto 10px; padding: 8px 14px 12px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.gl-rest-sets { color: var(--muted); font-size: .85rem; margin-bottom: 2px; }
+.gl-rest-sets strong { color: var(--text); }
+.gl-rest-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.gl-rest-row strong { font-size: 1.15rem; }
+.gl-rest-plan { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+.gl-rest-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--accent); transform: scaleX(0); transform-origin: left; will-change: transform; }
 .gl-rest.is-ready { border-color: color-mix(in srgb, var(--good) 60%, var(--border)); background: color-mix(in srgb, var(--good) 14%, var(--surface-2)); }
 .gl-rest.is-ready .gl-rest-plan { color: var(--good); font-weight: 700; }
 .gl-rest.is-ready .gl-rest-bar { background: var(--good); }
