@@ -544,6 +544,8 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .gl-ex { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
 .gl-ex-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .gl-ex-name { font-weight: 700; font-size: 1.05rem; }
+.gl-target { font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.gl-target span { font-size: .9rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .gl-sets { display: grid; gap: 8px; margin-top: 10px; }
 .gl-set { display: grid; grid-template-columns: 44px 1fr auto 1fr; align-items: center; gap: 8px; }
 .gl-check { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-weight: 700; cursor: pointer; display: grid; place-items: center; }

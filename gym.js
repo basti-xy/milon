@@ -57,8 +57,10 @@ function planKgForSet(ex, i) {
   return typeof ex.kg === 'number' ? ex.kg : null;
 }
 const fmtKg = (kg) => (kg == null || kg === '' ? '–' : `${Number(kg).toLocaleString('de-DE', { maximumFractionDigits: 2 })}`);
-function planDose(ex) {
+const planTarget = (ex) => `${ex.sets} × ${ex.reps}${exUnit(ex) === 's' ? ' s' : ''}`;
+function planDose(ex, { withKg = true } = {}) {
   const reps = `${ex.reps}${exUnit(ex) === 's' ? ' s' : ''}${ex.perSide ? ' pro Seite' : ''}`;
+  if (!withKg) return `${ex.sets} × ${reps}${ex.bodyweight ? ' · Körpergewicht' : ''}`;
   let kg = '';
   if (ex.bodyweight) kg = 'Körpergewicht';
   else if (Array.isArray(ex.kg)) kg = `${ex.kg.map(fmtKg).join(' / ')} kg`;
@@ -625,7 +627,8 @@ function exerciseLogHtml(ex) {
       <div>
         ${isFocus ? '<div class="gl-now">Jetzt dran</div>' : ''}
         <div class="gl-ex-name">${complete ? `${ICONS.check} ` : ''}${esc(ex.name)}</div>
-        <div class="small muted">${esc(planDose(ex))}${ex.restSec ? ` · Pause ${Math.floor(ex.restSec / 60)}:${pad2(ex.restSec % 60)}` : ''}</div>
+        <div class="gl-target">${esc(planTarget(ex))}${ex.perSide ? ' <span>pro Seite</span>' : ''}</div>
+        <div class="small muted">${[ex.bodyweight ? 'Körpergewicht' : '', ex.kgTarget ? `Ziel ${fmtKg(ex.kgTarget)} kg` : '', ex.restSec ? `Pause ${Math.floor(ex.restSec / 60)}:${pad2(ex.restSec % 60)}` : ''].filter(Boolean).map(esc).join(' · ')}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-act="gym-all-done" data-ex="${esc(ex.id)}">Alle ✓</button>
     </div>
@@ -658,18 +661,13 @@ function updateGymClock() {
   if (el) el.textContent = gymClockText();
 }
 
-/* Gewicht/Wdh.: Die erste Eingabe nach dem Antippen ersetzt die alte Zahl. Ohne Eingabe bleibt sie stehen.
+/* Gewicht/Wdh.: Die erste Eingabe nach dem Antippen ersetzt die alte Zahl (siehe input-Handler), ohne Eingabe bleibt sie stehen.
    select() allein reicht nicht, weil iOS die Markierung beim Antippen oft wieder aufhebt. */
-const isSetField = (el) => el?.dataset?.gymField === 'kg' || el?.dataset?.gymField === 'reps';
 app.addEventListener('focusin', (e) => {
-  if (!isSetField(e.target)) return;
+  const f = e.target.dataset?.gymField;
+  if (f !== 'kg' && f !== 'reps') return;
   e.target.dataset.fresh = '1';
   e.target.select();
-});
-app.addEventListener('beforeinput', (e) => {
-  if (!isSetField(e.target) || !e.target.dataset.fresh) return;
-  delete e.target.dataset.fresh;
-  if (e.inputType?.startsWith('insert')) e.target.value = '';
 });
 
 /** Eingaben auf der Erfassen-Seite übernehmen (ohne Neuzeichnen, damit der Fokus bleibt). */
@@ -682,6 +680,11 @@ app.addEventListener('input', (e) => {
   else {
     const set = gymDraft.exercises[e.target.dataset.ex]?.sets[Number(e.target.dataset.set)];
     if (!set) return;
+    if (e.target.dataset.fresh) {
+      // Erst nach dem Einfügen ersetzen: Leert man das Feld vorher (beforeinput), verwirft iOS das erste Zeichen
+      delete e.target.dataset.fresh;
+      if (e.data != null) e.target.value = e.data;
+    }
     const raw = e.target.value.trim().replace(',', '.');
     set[f] = raw === '' ? '' : raw; // abgehakt wird nur per Haken – sonst stimmt die Pausenuhr nicht
   }
@@ -894,7 +897,7 @@ function renderGymExercise(exId) {
   app.innerHTML = `<div class="page">
     ${topbar({ backHref: '#/gym', title: '' })}
     <h1 class="ov-title">${esc(ex.name)}</h1>
-    <p class="muted">Plan: ${esc(planDose(ex))}</p>
+    <p class="muted">Plan: ${esc(planDose(ex, { withKg: !st }))}</p>
     ${hint ? `<div class="exp-hint big">${ICONS.flame}<span>${esc(hint)}</span></div>` : ''}
     ${st ? `<section class="card">
       <div class="ex-stats">
