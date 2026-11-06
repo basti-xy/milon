@@ -21,6 +21,7 @@ Hier liegt nur der Programmcode.
 Unterseiten: `#/auswertung` (bisherige Karte *Trainingswoche*: Stunden → Erkenntnisse → Zahlen, blätterbar, Vorschau *Nächste Woche*),
 `#/koerper/<id>` (Detail einer Kachel). Gym erfassen: Satz per Haken (mit Uhrzeit), Leiste unten mit offenen Sätzen, Restpause
 und flüssig laufendem Balken; die erste Eingabe ersetzt die alte Zahl, „Jetzt dran“-Fokus, Bildschirm bleibt an, danach Abschluss-Übersicht.
+Vorbelegt: Gewicht vom letzten Mal, Wiederholungen = **Ziel aus dem Plan** (`reps`, Begründung `repsWhy` unter „Warum …?“).
 
 Einstellungen (Zahnrad oben rechts): Übergangszeiten, Töne, Sprachansage, **Gym-Tage** (Standard Mo/Mi/Fr), Synchronisierung,
 Backup, Einheit nachtragen.
@@ -30,6 +31,8 @@ Backup, Einheit nachtragen.
 Druck-Look (Entwurf „D“): Papier, Kacheln mit 1 px Rand, dünne Tintenlinien, keine Schatten/Verläufe. Schriften selbst gehostet
 in `fonts/` (Newsreader, IBM Plex Sans, IBM Plex Mono; SIL Open Font License, Lizenzen liegen daneben). Regeln: `CLAUDE.md`.
 Layout: iPhone eine Spalte, iPad hochkant 2 Spalten, iPad quer (ab 1180 px) Raster mit 4 Spalten.
+Sportarten als Punkte mit Symbol (gefüllt = erledigt, Ring = offen). Beim Erfassen (Dehn-Player, Gym) lässt sich ein
+**schwarzes Layout** per Mond-Knopf einschalten; der Rest der App bleibt hell.
 
 ## Code
 
@@ -56,7 +59,7 @@ Tagesdaten-Zwischenspeicher: `milon.health.cache.v1` (daily.json), `milon.health
 | `dehn-routines.json` | ✓ | | Dehn-Routinen, Zyklus, Rollen |
 | `dehn.json` | | ✓ | Dehn-Verlauf (Sync + Merge, Löschmarkierungen) |
 | `dehn-audio/` | Generator | | Sprachansagen als WAV-Bausteine plus `index.json` (Text → Datei) |
-| `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
+| `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps` = Wiederholungsziel, `repsWhy`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
 | `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen). Sätze mit `at` (Uhrzeit des Abhakens); ausgesetzte Einheiten mit `skipped: true` und `reason` |
 | `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) und `next` = Vorschau auf die nächste Woche aus dem Trainingsplan (Einheiten pro Tag, Abweichungen vom Original) – App liest nur |
 | `health/daily.json`, `health/history.json` | GitHub Action | | Tagesdaten für *Heute*: Einschätzung, 8 Kacheln, Woche, Wettkämpfe; Verläufe der letzten 400 Tage. Aufbau im README des Daten-Repositorys – App liest nur |

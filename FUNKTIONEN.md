@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: Umbau zur Health-App (Phase 2, v27).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v28 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -24,6 +24,8 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: Umbau z
 - [x] ◐ Erfassen: Vorbelegung, Entwurf, Haken mit Uhrzeit, Satz hinzufügen/entfernen, Fokus „Jetzt dran“, Leiste „Noch x von y Sätzen“, Pausenbalken
 - [x] ◐ Erste Eingabe ersetzt die alte Zahl (iOS), Wake Lock beim Erfassen, Entwurf beim Sperren des Bildschirms
 - [x] ◐ Abschluss-Übersicht
+- [x] ✓ Wiederholungsziel aus dem Plan (`reps`) vorbelegt statt der Zahl vom letzten Mal, groß „Ziel“, „Warum …?“ (`repsWhy`)
+- [x] ✓ Schwarzes Layout (Mond-Knopf) beim Erfassen, im Player und auf den Abschluss-Seiten; Rest bleibt hell
 
 ## Training & Auswertung
 - [x] ◐ Auswertung (früher Karte Trainingswoche): Stunden, Erkenntnisse, Zahlen, blätterbar (Pfeile, Wischen, Balken)
@@ -36,6 +38,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: Umbau z
 - [x] ✓ Steht heute an: Plan-Einheiten (Details aufklappbar), Gym an den Gym-Tagen, Dehnen – direkt startbar
 - [x] ✓ 8 Kacheln mit Abweichung vom 28-Tage-Schnitt, Verlauf, HRV-Normalbereich, „G“ für Garmin-Schätzwerte
 - [x] ✓ Detailseite je Kachel: 2 Wochen / 1 Monat / 6 Monate
+- [x] ✓ Sport-Punkte mit Symbolen (erledigt gefüllt, offen als Ring), Legende
 - [x] ✓ Diese Woche: Stunden, Sportarten, Wochenleiste (gefüllt = erledigt, Ring = offen), 12 Wochen (iPad)
 - [x] ✓ Wettkämpfe: nächste 2 + Saisonziel, Tage bis dahin
 - [x] ✓ Ohne Tagesdaten: Hinweis statt Fehler
