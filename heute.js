@@ -317,7 +317,7 @@ function weekCardHtml(d, wk, s, now) {
     ${bar ? `<div class="h-sbar">${bar}</div>` : ''}
     <div class="h-sums">${['swim', 'bike', 'run'].map((k) => `<span>${SPORT_SHORT[k]} ${fmtHM(wk?.done_h?.[k] || 0)}</span>`).join('')}${gym ? `<span>${gym}</span>` : ''}${dPlan ? `<span class="x-stretch">Dehnen ${dDone} von ${dPlan}</span>` : ''}</div>
     <div class="wk">${days}</div>
-    <div class="h-leg"><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span><span>● erledigt · ○ offen</span></div>
+    <div class="h-leg"><span><i class="s-swim"></i>Schwimmen</span><span><i class="s-bike"></i>Rad</span><span><i class="s-run"></i>Laufen</span><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span><span>gefüllt = erledigt · Ring = offen</span></div>
   </section>`;
 }
 

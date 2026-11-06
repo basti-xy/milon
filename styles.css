@@ -62,8 +62,42 @@
   font-family: var(--sans);
 }
 
+/* Schwarzes Layout beim Erfassen (Dehn-Player, Gym erfassen, Abschluss) – body.is-dark, siehe applyTheme() in app.js.
+   Echtes Schwarz (OLED), helle Tinte, Sportfarben aufgehellt (Kontrast ≥ 4,5 : 1 auf --tile). */
+body.is-dark {
+  color-scheme: dark;
+  --paper: #000000;
+  --tile: #131211;
+  --line: #34302b;
+  --hair: #24211e;
+  --ink: #eee9df;
+  --text-2: #aaa397;
+  --text-3: #6f685e;
+  --fill: #1d1b19;
+  --band: #26231f;
+  --bar: #3d3832;
+  --good: #8bbd7f;
+  --bad: #e5887b;
+  --sport-swim: #79acd0;
+  --sport-bike: #8bbd7f;
+  --sport-run: #e5887b;
+  --sport-strength: #ab9bd6;
+  --sport-stretch: #62c2b7;
+  --sport-race: #d9ac4c;
+  --race-text: #dfb75e;
+  --left: #79acd0;
+  --right: #ab9bd6;
+  --transition: #d9ac4c;
+  --rest: #62c2b7;
+  --joker: #79acd0;
+  --flame: #dfb75e;
+}
+body.is-dark::before { display: none; }
+body.is-dark .modal-backdrop { background: rgb(0 0 0 / .6); }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--paper); color: var(--ink); }
+html:has(body.is-dark) { background: #000; }
 body {
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
@@ -218,11 +252,29 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .h-row details summary { list-style: none; cursor: pointer; }
 .h-row details summary::-webkit-details-marker { display: none; }
 .h-empty { padding: 10px 14px 14px; border-top: 1px solid var(--hair); color: var(--text-2); font-size: 13.5px; }
-.sdot { width: 9px; height: 9px; border-radius: 5px; flex: none; background: var(--text-3); }
 .s-swim { --c: var(--sport-swim); } .s-bike { --c: var(--sport-bike); } .s-run { --c: var(--sport-run); }
 .s-strength, .s-gym { --c: var(--sport-strength); } .s-stretch { --c: var(--sport-stretch); } .s-race { --c: var(--sport-race); }
 
-.sdot[class*="s-"] { background: var(--c, var(--text-3)); }
+/* Sport-Punkte mit Symbol: gefüllter Kreis = erledigt (Symbol ausgespart), Ring (Klasse o) = offen/geplant.
+   Gilt für Listen (.sdot, .tw-dot), Wochenleisten und Kalender (.dots i) und Legenden (.h-leg i). */
+.s-swim { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path d='M2 9c2.5-2.4 4.6-2.4 6.8 0s4.4 2.4 6.6 0 4.4-2.4 6.6 0M2 16c2.5-2.4 4.6-2.4 6.8 0s4.4 2.4 6.6 0 4.4-2.4 6.6 0'/></svg>"); }
+.s-bike { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='6' cy='15.5' r='4.2'/><circle cx='18' cy='15.5' r='4.2'/><path d='M6 15.5L11 8h4.5L18 15.5M9 8h3.5'/></svg>"); }
+.s-run { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path fill='black' stroke='none' d='M1.5 18.5v-4.2L5 6.5h4l1.6 3.3 4.4 1.7 6.3 2.1c1.7.6 1.6 4.9-.3 4.9z'/></svg>"); }
+.s-strength, .s-gym { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path stroke-width='3.2' d='M6.5 6v12M17.5 6v12M2.5 9.5v5M21.5 9.5v5M6.5 12h11'/></svg>"); }
+.s-stretch { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='4' r='2.4' fill='black' stroke='none'/><path d='M3.5 9l8.5 2.2L20.5 9M12 11.2v4l-4.5 6M12 15.2l4.5 6'/></svg>"); }
+.s-race { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'><path d='M6 22V3'/><path fill='black' d='M6 3.6h12.5l-2.8 4.2 2.8 4.2H6z'/></svg>"); }
+.sdot, .tw-dot, .dots i, .h-leg i {
+  --d: 16px; position: relative; display: inline-block; flex: none; width: var(--d); height: var(--d); border-radius: 50%;
+  background: var(--c, var(--text-3)); border: 0;
+}
+.sdot { --d: 20px; }
+.tw-dot { --d: 15px; }
+:is(.sdot, .tw-dot, .dots i, .h-leg i):is(.s-swim, .s-bike, .s-run, .s-strength, .s-gym, .s-stretch, .s-race)::before {
+  content: ""; position: absolute; inset: 18%; background: var(--tile);
+  -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
+}
+:is(.dots i, .h-leg i).o { background: transparent; border: 1.5px solid var(--c, var(--text-2)); }
+:is(.dots i, .h-leg i).o::before { background: var(--c); inset: 14%; }
 
 /* Kacheln Körper */
 .mt { padding: 11px 12px 9px; display: flex; flex-direction: column; gap: 3px; color: inherit; }
@@ -257,13 +309,10 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .wk b { font-family: var(--mono); font-weight: 500; font-size: 13px; width: 26px; height: 26px; line-height: 26px; border-radius: 13px; }
 .wk .t b { background: var(--ink); color: var(--paper); }
 .wk .f b { color: var(--text-2); }
-.dots { display: flex; gap: 3px; height: 6px; justify-content: center; flex-wrap: wrap; }
-.dots i { display: block; width: 6px; height: 6px; border-radius: 3px; background: var(--c, var(--text-3)); }
-.dots i.o { background: transparent; border: 1.5px solid var(--c); }
-.h-leg { font-size: 11px; color: var(--text-2); display: flex; gap: 10px; flex-wrap: wrap; }
-.h-leg span { display: inline-flex; align-items: center; gap: 4px; }
-.h-leg i { width: 6px; height: 6px; border-radius: 3px; background: var(--c); display: inline-block; }
-.h-leg i.o { background: transparent; border: 1.5px solid var(--text-2); }
+.dots { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; min-height: 16px; max-width: 100%; }
+.h-leg { font-size: 11.5px; color: var(--text-2); display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; }
+.h-leg span { display: inline-flex; align-items: center; gap: 5px; }
+.h-leg i { --d: 15px; }
 
 /* Wettkämpfe */
 .h-races { overflow: hidden; }
@@ -284,9 +333,9 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .gcal .c.t b { background: var(--ink); color: var(--paper); }
 .gcal .c.f b { color: var(--text-2); }
 .gcal .c.o b { color: var(--text-3); }
-.gcal .dots { height: 5px; }
-.gcal .dots i { width: 5px; height: 5px; }
-.gcal .dots i.o { border-width: 1.2px; }
+.gcal .dots { min-height: 14px; gap: 1px; }
+.gcal .dots i { --d: 14px; }
+.gcal .dots i.o { border-width: 1.3px; }
 .gcal-nav { display: flex; align-items: center; gap: 6px; }
 
 /* Segment-Umschalter (Zeiträume) */
@@ -596,12 +645,6 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .tw-plan[open] summary { border-bottom: 1px solid var(--hair); }
 .tw-plan p { margin: 0; padding: 8px 10px 10px; white-space: pre-line; color: var(--text-2); }
 .tw-plan-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.tw-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-3); }
-.tw-dot.s-swim { background: var(--sport-swim); }
-.tw-dot.s-bike { background: var(--sport-bike); }
-.tw-dot.s-run { background: var(--sport-run); }
-.tw-dot.s-strength, .tw-dot.s-gym { background: var(--sport-strength); }
-.tw-dot.s-race { background: var(--sport-race); }
 .tw-sport-label { display: flex; align-items: center; gap: 6px; }
 .tw-chg { flex-basis: 100%; font-size: .8rem; font-weight: 600; }
 .tw-chg.c-moved, .tw-chg.c-changed { color: var(--race-text); }
@@ -677,6 +720,8 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .gl-ex-name { font-family: var(--serif); font-size: 19px; line-height: 1.2; }
 .gl-target { font-family: var(--serif); font-size: 30px; font-weight: 500; line-height: 1.15; margin-top: 2px; font-variant-numeric: lining-nums tabular-nums; }
 .gl-target span { font-family: var(--sans); font-size: .9rem; font-weight: 500; color: var(--text-2); }
+.gl-target .gl-target-k { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--sport-strength); margin-bottom: -2px; }
+.gl-why { margin-top: 4px; }
 .gl-sets { display: grid; gap: 8px; margin-top: 10px; }
 .gl-set { display: grid; grid-template-columns: 44px 1fr auto 1fr; align-items: center; gap: 8px; }
 .gl-check { width: 44px; height: 44px; border-radius: 22px; border: 1.5px solid var(--ink); background: transparent; color: var(--text-2); font-family: var(--mono); cursor: pointer; display: grid; place-items: center; }

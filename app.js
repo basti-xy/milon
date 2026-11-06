@@ -47,6 +47,7 @@ const APP_DEFAULTS = {
   voice: true,
   muted: false, // Ton-Schalter im Player: aus = gar kein Ton (Video im Bild-in-Bild läuft weiter)
   gymDays: [1, 3, 5], // Gym-Tage für offene Ringe in Woche und Kalender (getDay(): 1 = Mo, 3 = Mi, 5 = Fr)
+  captureDark: false, // schwarzes Layout beim Erfassen (Dehn-Player, Gym erfassen, Abschluss-Seiten)
 };
 
 /* ---------- Speicher (localStorage, immer mit try/catch) ---------- */
@@ -157,6 +158,7 @@ const ICONS = {
   clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   flame: svg('<path d="M12 2.5c.6 3.2-1.2 5.2-2.9 7.1C7.6 11.3 6 13 6 15.6 6 19 8.7 21.5 12 21.5s6-2.5 6-5.9c0-2.6-1.4-4.6-2.8-6.2.1 1.7-.6 3-1.7 3.6.5-3.8-.4-7.4-1.5-10.5z" fill="currentColor" stroke="none"/>'),
   moon: svg('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'),
   trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   shield: svg('<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>'),
   tabToday: svg('<path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V20h4.5v-5.5h4V20h4.5V9.5"/>'),
@@ -1070,6 +1072,7 @@ function rerenderCurrent() {
 
 function route({ keepScroll = false } = {}) {
   const r = currentRoute();
+  applyTheme(r);
   updateTabbar(r.name, r.arg);
   if (typeof leaveGymPage === 'function') leaveGymPage(r); // Timer der Erfassen-Seite beenden
   if (run && !run.finished) {
@@ -1125,6 +1128,27 @@ function route({ keepScroll = false } = {}) {
   }
 }
 function redirect(hash) { history.replaceState(null, '', hash); route(); }
+
+/* ---------- Schwarzes Layout beim Erfassen ----------
+   Gilt nur für Dehn-Player, Gym erfassen/bearbeiten und die Abschluss-Seiten; der Rest bleibt hell.
+   Schalter (Mond/Sonne) im Player und auf der Erfassen-Seite, gespeichert in den Einstellungen (captureDark). */
+const isCaptureRoute = (r) => r.name === 'run' || r.name === 'done' || (r.name === 'gym' && ['log', 'edit', 'fertig'].includes(r.arg));
+function applyTheme(r = currentRoute()) {
+  const dark = !!cfg.captureDark && (isCaptureRoute(r) || !!(run && !run.finished));
+  document.body.classList.toggle('is-dark', dark);
+  document.documentElement.style.colorScheme = dark ? 'dark' : '';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? '#000000' : '#eeeae1';
+}
+function themeBtnHtml(cls = 'icon-btn') {
+  const dark = !!cfg.captureDark;
+  return `<button class="${cls} theme-btn" data-act="theme-dark" aria-pressed="${dark}" aria-label="${dark ? 'Helles Layout' : 'Schwarzes Layout'}" title="${dark ? 'Helles Layout' : 'Schwarzes Layout'}">${dark ? ICONS.sun : ICONS.moon}</button>`;
+}
+function toggleCaptureDark() {
+  saveSetting('captureDark', !cfg.captureDark);
+  applyTheme();
+  document.querySelectorAll('.theme-btn').forEach((b) => { b.outerHTML = themeBtnHtml(b.className.replace(/\s*theme-btn/, '')); });
+}
 
 /* =========================================================================
    Screens
@@ -1524,6 +1548,7 @@ function nextWorkText() {
 
 function renderPlayer() {
   if (!run) return;
+  applyTheme();
   const st = run.steps[run.i];
   const ex = st.ex;
   const kicker = { transition: 'Gleich', switch: 'Seitenwechsel', rest: 'Satzpause', work: ex.phase ? cap(ex.phase) : 'Los' }[st.kind];
@@ -1537,6 +1562,7 @@ function renderPlayer() {
         <div class="p-bar"><span id="p-bar"></span></div>
         <div class="p-meta"><span>Übung ${st.exIndex + 1}/${run.routine.exercises.length}</span><span id="p-remaining"></span></div>
       </div>
+      ${themeBtnHtml()}
       <button class="icon-btn mute-btn" data-act="mute" id="btn-mute"></button>
     </div>
     <div class="p-scroll">
@@ -1682,6 +1708,7 @@ function renderDone() {
   }
 
   const cool = isWeekly && weeklyRole().cooldown ? routineById(weeklyRole().cooldown) : null;
+  applyTheme();
   app.innerHTML = `
   <div class="page page-done">
     <div class="done-check">${ICONS.check}</div>
@@ -1906,6 +1933,7 @@ app.addEventListener('click', async (e) => {
   if (act === 'tw-prev') { stepTrainingWeek(1); return; }
   if (act === 'tw-next') { stepTrainingWeek(-1); return; }
   if (act === 'tw-week') { trainingIdx = Number(el.dataset.i) || 0; redrawTrainingCard(); return; }
+  if (act === 'theme-dark') { toggleCaptureDark(); return; }
   switch (act) {
     case 'start': startRun(el.dataset.id); break;
     case 'toggle': togglePause(); el.blur(); break;
