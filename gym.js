@@ -373,16 +373,13 @@ function isoWeek(d) {
   return Math.ceil(((t - y0) / 86400000 + 1) / 7);
 }
 
-/* ---------- Gym-Tab ---------- */
-function renderGym() {
-  const now = new Date();
+/* ---------- Gym-Bereich (auf der Seite Training, heute.js) ---------- */
+function renderGym() { redirect('#/training'); }
+function gymSectionsHtml(now = new Date()) {
   const plans = gymPlans();
   const list = getGymSessions();
   const recent = [...list].reverse().slice(0, 8);
-  app.innerHTML = `<div class="page">
-    ${pageHead({ title: 'Gym', now })}
-    ${gymWeekHtml(now)}
-    ${gymStreakHtml(now)}
+  return `
     <section class="section">
       <h2 class="section-title">Splits</h2>
       <div class="routine-list">${plans.splits.map((s) => `
@@ -412,8 +409,7 @@ function renderGym() {
         ${sp.exercises.filter(isTracked).map((ex) => exerciseRowHtml(ex, sp.id)).join('')}
       </div>`).join('')}
     </section>
-    ${plans.rules?.length ? `<section class="card"><h2 class="card-title">Grundregeln</h2>${plans.rules.map((t) => `<p class="small muted">${esc(t)}</p>`).join('')}</section>` : ''}
-  </div>`;
+    ${plans.rules?.length ? `<details class="benefit" style="margin:12px 0"><summary>Grundregeln</summary>${plans.rules.map((t) => `<p class="small muted">${esc(t)}</p>`).join('')}</details>` : ''}`;
 }
 function exerciseRowHtml(ex, splitId) {
   const st = exerciseStats(ex.id);
