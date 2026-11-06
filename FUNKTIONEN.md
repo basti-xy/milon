@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v29 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v30 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -39,6 +39,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v29 (sc
 - [x] ✓ 8 Kacheln mit Abweichung vom 28-Tage-Schnitt, Verlauf, HRV-Normalbereich, „G“ für Garmin-Schätzwerte
 - [x] ✓ Detailseite je Kachel: 2 Wochen / 1 Monat / 6 Monate
 - [x] ✓ Sport-Punkte mit Symbolen (erledigt gefüllt, offen als Ring), Legende
+- [x] ✓ Wochen-Routine als eigener Punkt in Wochenleiste und Kalender (erledigt; Ring am festen Wochentag, solange in der Woche offen)
 - [x] ✓ Diese Woche: Stunden, Sportarten, Wochenleiste (gefüllt = erledigt, Ring = offen), 12 Wochen (iPad)
 - [x] ✓ Wettkämpfe: nächste 2 + Saisonziel, Tage bis dahin
 - [x] ✓ Ohne Tagesdaten: Hinweis statt Fehler
