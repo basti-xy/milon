@@ -46,6 +46,7 @@ const APP_DEFAULTS = {
   sound: true,
   voice: true,
   muted: false, // Ton-Schalter im Player: aus = gar kein Ton (Video im Bild-in-Bild läuft weiter)
+  gymDays: [1, 3, 5], // Gym-Tage für offene Ringe in Woche und Kalender (getDay(): 1 = Mo, 3 = Mi, 5 = Fr)
 };
 
 /* ---------- Speicher (localStorage, immer mit try/catch) ---------- */
@@ -1045,10 +1046,9 @@ function currentRoute() {
 
 /* ---------- Hauptbereiche (untere Tab-Leiste) ---------- */
 const MAIN_TABS = [
-  { id: 'home', href: '#/', label: 'Heute', icon: 'tabToday' },
-  { id: 'gym', href: '#/gym', label: 'Gym', icon: 'tabGym' },
-  { id: 'dehnen', href: '#/dehnen', label: 'Dehnen', icon: 'tabStretch' },
-  { id: 'werte', href: '#/werte', label: 'Werte', icon: 'tabValues' },
+  { id: 'home', href: '#/', label: 'Heute' },
+  { id: 'training', href: '#/training', label: 'Training' },
+  { id: 'werte', href: '#/werte', label: 'Werte' },
 ];
 const isMainTab = (name) => MAIN_TABS.some((t) => t.id === name);
 let lastMainHash = '#/'; // wohin "Zurück" aus Unterseiten führt
@@ -1058,15 +1058,14 @@ function updateTabbar(name, arg = '') {
   tabbarEl.hidden = !show;
   document.body.classList.toggle('has-tabbar', show);
   if (!show) return;
-  tabbarEl.innerHTML = MAIN_TABS.map((t) => `<a href="${t.href}" class="tab ${t.id === name ? 'is-active' : ''}" ${t.id === name ? 'aria-current="page"' : ''}>
-    ${ICONS[t.icon]}<span>${t.label}</span></a>`).join('');
+  tabbarEl.innerHTML = MAIN_TABS.map((t) => `<a href="${t.href}" class="tab ${t.id === name ? 'is-active' : ''}" ${t.id === name ? 'aria-current="page"' : ''}>${t.label}</a>`).join('');
 }
 /** Aktuelle Hauptseite neu zeichnen (z. B. nach Sync), ohne die Scrollposition zu verlieren. */
 function rerenderCurrent() {
   if (run || modalOpen() || !DATA) return;
   const { name: n, arg } = currentRoute();
   // Unterseiten mit Eingaben (Gym erfassen) nicht neu zeichnen, sonst gingen Eingaben verloren
-  if ((isMainTab(n) && !arg) || n === 'settings') route({ keepScroll: true });
+  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper') route({ keepScroll: true });
 }
 
 function route({ keepScroll = false } = {}) {
@@ -1102,17 +1101,27 @@ function route({ keepScroll = false } = {}) {
     case 'settings':
       renderSettings();
       return;
-    case 'dehnen':
-      renderDehnen();
+    case 'dehnen': // früherer Tab – jetzt Teil von „Training“
+      redirect('#/training');
       return;
     case 'gym':
-      renderGymRoute(r); // gym.js
+      if (!r.arg) { redirect('#/training'); return; }
+      renderGymRoute(r); // gym.js (Erfassen, Bearbeiten, Übung, Abschluss)
+      return;
+    case 'training':
+      renderTraining(); // heute.js
+      return;
+    case 'auswertung':
+      renderAuswertung(); // heute.js
+      return;
+    case 'koerper':
+      renderKoerper(r.arg); // heute.js
       return;
     case 'werte':
       renderWerte();
       return;
     default:
-      renderToday();
+      renderHeute(); // heute.js
   }
 }
 function redirect(hash) { history.replaceState(null, '', hash); route(); }
@@ -1144,41 +1153,7 @@ function pageHead({ title, brand = false, now = new Date() }) {
     </section>`}`;
 }
 
-/* ---------- Heute ---------- */
-function renderToday() {
-  const hist = getHistory();
-  const now = new Date();
-  const s = computeStreak(hist, now);
-  const a = computeWeekly(hist, now);
-  app.innerHTML = `
-  <div class="page">
-    ${pageHead({ title: APP_NAME, brand: true, now })}
-    ${todayHtml(s, a, now)}
-    ${gymTodayHtml(now)}
-    ${trainingHtml()}
-    ${backupReminderHtml(hist, now)}
-  </div>`;
-}
-
-/* ---------- Dehnen (die bisherige Startseite) ---------- */
-function renderDehnen() {
-  const hist = getHistory();
-  const now = new Date();
-  const s = computeStreak(hist, now);
-  const a = computeWeekly(hist, now);
-  app.innerHTML = `
-  <div class="page">
-    ${pageHead({ title: 'Dehnen', now })}
-    ${todayHtml(s, a, now)}
-    ${streakHtml(s, a, now)}
-    ${weeklyHtml(a, now)}
-    <section class="section">
-      <h2 class="section-title">Alle Routinen</h2>
-      <div class="routine-list">${DATA.routines.map(routineRowHtml).join('')}</div>
-    </section>
-  </div>`;
-}
-
+/* Startseite „Heute“ und Seite „Training“: heute.js */
 
 function startLink(r, label = 'Los geht’s') {
   return `<a class="btn btn-primary btn-lg" href="#/routine/${encodeURIComponent(r.id)}">${ICONS.play}<span>${esc(label)}</span></a>`;
@@ -1400,7 +1375,7 @@ async function loadTraining() {
     if (!r || !Array.isArray(r.data?.weeks)) return;
     const before = JSON.stringify(trainingData());
     store.set(KEYS.trainingCache, r.data);
-    if (JSON.stringify(r.data) !== before && currentRoute().name === 'home') rerenderCurrent();
+    if (JSON.stringify(r.data) !== before && ['home', 'auswertung'].includes(currentRoute().name)) rerenderCurrent();
   } catch { /* Übersicht ist optional – ohne Datei oder offline bleibt der letzte Stand */ }
 }
 
@@ -1755,6 +1730,10 @@ function renderSettings() {
       ${toggleHtml('sound', 'Töne', '3-2-1, Start, Seitenwechsel, Satzpause', '<button class="btn btn-ghost btn-sm" data-act="test-sound">Test</button>')}
       ${toggleHtml('voice', 'Sprachansage', esc(voiceStatusText()), '<button class="btn btn-ghost btn-sm" data-act="test-voice">Test</button>')}
       ${toggleHtml('autoAdvanceRepExercises', 'Auto-Weiter bei Wiederholungen', 'Aus: Nach der geschätzten Zeit wartet die App auf „Fertig“')}
+      <div class="set-row is-wrap">
+        <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist</div></div>
+        <div class="day-chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-act="set-gymday" data-day="${d}" class="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d) ? 'is-on' : ''}" aria-pressed="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d)}">${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d]}</button>`).join('')}</div>
+      </div>
       <div class="set-foot"><button class="btn btn-ghost btn-sm" data-act="reset-settings">Auf Standard zurücksetzen</button></div>
     </section>
 
@@ -1915,6 +1894,15 @@ app.addEventListener('click', async (e) => {
   if (!el) return;
   const act = el.dataset.act;
   if (act.startsWith('gym-')) { handleGymAction(act, el); return; } // gym.js
+  if (act.startsWith('h-')) { handleHeuteAction(act, el); return; } // heute.js
+  if (act === 'set-gymday') {
+    const day = Number(el.dataset.day);
+    const cur = new Set(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays);
+    if (cur.has(day)) cur.delete(day); else cur.add(day);
+    saveSetting('gymDays', [...cur].sort((x, y) => x - y));
+    renderSettings();
+    return;
+  }
   if (act === 'tw-prev') { stepTrainingWeek(1); return; }
   if (act === 'tw-next') { stepTrainingWeek(-1); return; }
   if (act === 'tw-week') { trainingIdx = Number(el.dataset.i) || 0; redrawTrainingCard(); return; }
@@ -1980,6 +1968,7 @@ app.addEventListener('click', async (e) => {
       await loadGymPlans();
       await loadValues();
       await loadTraining();
+      await loadHealth();
       loadVoiceIndex(); // Ansage-Aufnahmen (im Hintergrund)
       route();
       toast(routinesError || (sync.status === 'ok' ? 'Abgeglichen.' : sync.message));
@@ -2057,7 +2046,7 @@ document.addEventListener('visibilitychange', () => {
   if (run && !run.finished) { requestWakeLock(); tick(); return; }
   if (DATA) rerenderCurrent(); // Datumswechsel über Nacht
   if (DATA) scheduleSync(); // Änderungen von anderen Geräten holen
-  if (DATA) { loadTraining(); loadGymPlans(); loadValues(); }
+  if (DATA) { loadTraining(); loadGymPlans(); loadValues(); loadHealth(); }
 });
 window.addEventListener('online', () => { if (DATA) scheduleSync(); });
 
@@ -2119,6 +2108,7 @@ async function init() {
   loadTraining(); // Wochenübersicht (im Hintergrund)
   loadGymPlans(); // Gym-Pläne (gym.js, im Hintergrund)
   loadValues(); // Werte (werte.js, im Hintergrund)
+  loadHealth(); // Tagesdaten für Heute (heute.js, im Hintergrund)
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

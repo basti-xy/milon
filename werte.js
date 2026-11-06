@@ -125,14 +125,16 @@ function valueItemHtml(item, group = {}) {
   </details>`;
 }
 
+const groupHtml = (g) => `<section class="card values-group">
+  <div class="today-label">${esc(g.name)}</div>
+  ${(g.items || []).map((it) => valueItemHtml(it, g)).join('')}
+</section>`;
+
 function renderWerte() {
   const d = valuesData();
-  app.innerHTML = `<div class="page">
+  app.innerHTML = `<div class="page page-mid">
     ${pageHead({ title: 'Werte' })}
-    ${d ? d.groups.map((g) => `<section class="card values-group">
-      <div class="today-label">${esc(g.name)}</div>
-      ${(g.items || []).map((it) => valueItemHtml(it, g)).join('')}
-    </section>`).join('') : `<section class="card">
+    ${d ? `<div class="values-grid"><div>${d.groups.map((g, i) => i % 2 ? '' : groupHtml(g)).join('')}</div><div>${d.groups.map((g, i) => i % 2 ? groupHtml(g) : '').join('')}</div></div>` : `<section class="card">
       <h2 class="card-title">Noch keine Werte</h2>
       <p class="small muted">Lege <code>${VALUES_PATH}</code> in deinem Daten-Repository an.
       ${GHSync.getConfig() ? 'Danach in den Einstellungen „Jetzt abgleichen“.' : 'Verbinde dazu zuerst die Synchronisierung in den Einstellungen.'}</p>

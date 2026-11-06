@@ -10,31 +10,44 @@ Alle **Inhalte und Verläufe liegen nicht in diesem Repository**, sondern in ein
 Die App liest und schreibt sie über die GitHub-API mit einem persönlichen Token, den man pro Gerät einmal in der App einträgt.
 Hier liegt nur der Programmcode.
 
-## Bereiche (untere Tab-Leiste)
+## Bereiche (schwarze Pille unten mittig)
 
-| Tab | Inhalt |
+| Bereich | Inhalt |
 |---|---|
-| **Heute** | Dehn-Aufgabe des Tages, Gym-Status der Woche mit nächstem Split, Karte *Trainingswoche* |
-| **Gym** | Wochenziel, Gym-Streak mit Kalender, Splits (abhaken, aussetzen oder ausführlich erfassen), letzte Einheiten, Progression pro Übung. Beim Erfassen: Satz per Haken (mit Uhrzeit), Leiste unten mit offenen Sätzen, Restpause und flüssig laufendem Balken; die erste Eingabe in Gewicht/Wdh. ersetzt die alte Zahl, „Jetzt dran“-Fokus (Supersätze abwechselnd), Bildschirm bleibt an, danach Abschluss-Übersicht (Dauer, Volumen, Ø Pause, neue Bestwerte, nächstes Mal steigern) |
-| **Dehnen** | Dehn-Streak mit Kalender, Wochen-Routine, alle Routinen, Player mit Timer und Sprachansagen |
+| **Heute** | Kopf (KW · Planwoche · Phase, Datum, auf dem iPad „Daten von …“), **Einschätzung** (Tagesampel aus `health/daily.json`) mit *Letzte Woche* (Headline + ✓/✗/→) und Link *Ganze Auswertung*, **Steht heute an** (Plan-Einheiten, nächster Gym-Split an den Gym-Tagen, Dehnen des Tages inkl. Nachholen – direkt startbar), **Körper** (8 Kacheln: Wert, Abweichung vom 28-Tage-Schnitt, Verlauf; „G“ = von Garmin berechnet; antippen = Detailseite 2 Wochen / 1 Monat / 6 Monate), **Diese Woche** (Stunden erledigt/geplant, Sportarten, Wochenleiste mit Punkten), **Wettkämpfe** (nächste 2 + Saisonziel); auf dem iPad zusätzlich Wochenstunden 12 Wochen und Kalender Gym & Dehnen |
+| **Training** | Gemeinsamer Kalender (5 Wochen, blätterbar: Gym, Dehnen, Wettkampf), Dehn- und Gym-Streak nebeneinander, darunter **Gym** (Wochenziel mit Aussetzen/Abhaken/Erfassen, Splits, letzte Einheiten, Progression pro Übung) und **Dehnen** (Einheit des Tages, Wochen-Routine, Rhythmus, alle Routinen). Erfassen-Ansicht und Dehn-Player sind eigene Vollbild-Ansichten |
 | **Werte** | Leistungs- und Körperwerte mit Stand-Datum und Verlauf |
 
-Einstellungen (Zahnrad oben): Übergangszeiten, Töne, Sprachansage, Synchronisierung, Backup, Einheit nachtragen.
+Unterseiten: `#/auswertung` (bisherige Karte *Trainingswoche*: Stunden → Erkenntnisse → Zahlen, blätterbar, Vorschau *Nächste Woche*),
+`#/koerper/<id>` (Detail einer Kachel). Gym erfassen: Satz per Haken (mit Uhrzeit), Leiste unten mit offenen Sätzen, Restpause
+und flüssig laufendem Balken; die erste Eingabe ersetzt die alte Zahl, „Jetzt dran“-Fokus, Bildschirm bleibt an, danach Abschluss-Übersicht.
+
+Einstellungen (Zahnrad oben rechts): Übergangszeiten, Töne, Sprachansage, **Gym-Tage** (Standard Mo/Mi/Fr), Synchronisierung,
+Backup, Einheit nachtragen.
+
+## Design
+
+Druck-Look (Entwurf „D“): Papier, Kacheln mit 1 px Rand, dünne Tintenlinien, keine Schatten/Verläufe. Schriften selbst gehostet
+in `fonts/` (Newsreader, IBM Plex Sans, IBM Plex Mono; SIL Open Font License, Lizenzen liegen daneben). Regeln: `CLAUDE.md`.
+Layout: iPhone eine Spalte, iPad hochkant 2 Spalten, iPad quer (ab 1180 px) Raster mit 4 Spalten.
 
 ## Code
 
 | Datei | Inhalt |
 |---|---|
-| `index.html`, `styles.css` | Gerüst und Design (dunkel, Akzent über CSS-Variablen `--accent`, `--accent-grad`, `--good`) |
-| `app.js` | Router, Tab-Leiste, Dehnen (Streak, Player, Ansagen), Trainingswoche, Einstellungen, Sync, Backup |
+| `index.html`, `styles.css` | Gerüst und Design (Farben als CSS-Variablen, siehe `CLAUDE.md`) |
+| `app.js` | Router, Navigation, Dehnen (Streak, Player, Ansagen), Trainingswoche, Einstellungen, Sync, Backup |
+| `heute.js` | Heute, Auswertung, Körper-Details, Training (Kalender, Streaks) – liest `health/daily.json` und `health/history.json` |
 | `gym.js` | Gym: Pläne, Protokoll mit Sync, Erfassen, Progression, Gym-Streak |
-| `werte.js` | Werte-Tab |
+| `werte.js` | Werte |
 | `sync.js` | `GHSync`: Lesen/Schreiben einer Datei im Daten-Repository mit Konflikt-Wiederholung |
 | `sw.js` | Service Worker (Network-first, offline aus dem Cache) |
+| `fonts/` | Schriften (woff2, lateinisch) |
 
 Nach jeder Änderung die Versionen hochzählen: `?v=…` in `index.html` und `CACHE` in `sw.js`.
 localStorage-Schlüssel heißen `milon.*` (früher `dehnapp.*`, beim Start einmalig übernommen – die alten bleiben vorerst als Rückfall).
 Schlüssel nur mit Migration umbenennen; Dateinamen im Daten-Repository (`dehn.json` usw. – benannt nach dem Bereich Dehnen) bleiben.
+Tagesdaten-Zwischenspeicher: `milon.health.cache.v1` (daily.json), `milon.health.history.v1` (history.json) – offline gilt der letzte Stand.
 
 ## Daten-Repository (privat)
 
@@ -46,6 +59,7 @@ Schlüssel nur mit Migration umbenennen; Dateinamen im Daten-Repository (`dehn.j
 | `gym-plans.json` | ✓ | | Gym-Pläne: Splits mit Übungen (`id`, `block`, `sets`, `reps`, `kg`, `stepKg` …) und `settings.weeklyTarget` |
 | `gym.json` | | ✓ | Gym-Protokoll (Merge pro Einheit: neueste Bearbeitung gewinnt, Löschmarkierungen). Sätze mit `at` (Uhrzeit des Abhakens); ausgesetzte Einheiten mit `skipped: true` und `reason` |
 | `training/weekly.json` | Auswertung | | Trainingswoche (Stunden, Erkenntnisse, Sportarten, Erholung) und `next` = Vorschau auf die nächste Woche aus dem Trainingsplan (Einheiten pro Tag, Abweichungen vom Original) – App liest nur |
+| `health/daily.json`, `health/history.json` | GitHub Action | | Tagesdaten für *Heute*: Einschätzung, 8 Kacheln, Woche, Wettkämpfe; Verläufe der letzten 400 Tage. Aufbau im README des Daten-Repositorys – App liest nur |
 | `training/values.json` | ✓ | | Werte: `groups[].items[]` mit `unit`, `kind` (`number`/`pace`/`time`), `better`, `entries[]` (`date`, optional `event` = Wettkampf/Einheit und `note`); Gruppe mit `pr: true` = Bestwerte (Verbesserung statt Trendpfeil). Linie mit echten Werten, waagerecht nach Datum |
 
 Die Ansagen werden wie die Countdown-Töne über Web Audio abgespielt. Auf iPhone/iPad gibt es im Player einen
@@ -91,6 +105,6 @@ ausgeschlossen.
 ## Bedienung
 
 Tippen auf den Ring = Pause. Tastatur: **Leertaste** Pause, **→** überspringen, **←** zurück, **Enter** „Fertig“, **Esc** abbrechen.
-Trainingswoche: Pfeile, Wischen oder Tippen auf einen Wochenbalken blättert durch ältere Wochen. Bei der neuesten Woche steht
+Auswertung: Pfeile, Wischen oder Tippen auf einen Wochenbalken blättert durch ältere Wochen. Bei der neuesten Woche steht
 darunter die Vorschau *Nächste Woche* (geplante Stunden je Sportart, Einheiten pro Tag zum Aufklappen, Markierung
 verschoben / geändert / neu / entfällt).
