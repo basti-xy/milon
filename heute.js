@@ -276,12 +276,26 @@ function dayDots(k, d, s, now) {
     if (wc.n < wc.target && weekKey(parseDay(k)) === weekKey(now)) dots.push({ c: 'strength', o: true });
   }
   const st = s.days.get(k);
-  const dehnDone = getHistory().some((h) => h.date === k);
+  const dehnDone = getHistory().some((h) => h.date === k && h.routineId !== WEEKLY_ID());
   if (dehnDone || st === 'done' || st === 'late') dots.push({ c: 'stretch', o: false });
   else if (k >= tKey && s.startKey && s.planOn(k) !== 'pause') dots.push({ c: 'stretch', o: true });
   else if (k === tKey && s.owed) dots.push({ c: 'stretch', o: true });
+  const wd = weeklyDot(k, tKey);
+  if (wd) dots.push(wd);
   return dots;
 }
+/** Wochen-Routine (roles.weekly): eigener Punkt – erledigt an jedem Tag mit Eintrag, geplant (Ring) am festen Wochentag,
+    solange sie in dieser Woche noch nicht gemacht ist. */
+function weeklyDot(k, tKey, hist = getHistory()) {
+  const role = weeklyRole();
+  if (!role || !routineById(role.routine)) return null;
+  if (hist.some((h) => h.date === k && h.routineId === role.routine)) return { c: 'weekly', o: false };
+  const day = parseDay(k);
+  if (k < tKey || day.getDay() !== Number(role.weekday)) return null;
+  const wk = weekKey(day);
+  return hist.some((h) => h.routineId === role.routine && weekKey(parseDay(h.date)) === wk) ? null : { c: 'weekly', o: true };
+}
+const weeklyLegend = () => (weeklyRole() && routineById(WEEKLY_ID()) ? `<span><i class="s-weekly"></i>${esc(weeklyName())}</span>` : '');
 const dotsHtml = (dots) => `<span class="dots">${dots.map((x) => `<i class="s-${esc(x.c)} ${x.o ? 'o' : ''}"></i>`).join('')}</span>`;
 
 function weekCardHtml(d, wk, s, now) {
@@ -317,7 +331,7 @@ function weekCardHtml(d, wk, s, now) {
     ${bar ? `<div class="h-sbar">${bar}</div>` : ''}
     <div class="h-sums">${['swim', 'bike', 'run'].map((k) => `<span>${SPORT_SHORT[k]} ${fmtHM(wk?.done_h?.[k] || 0)}</span>`).join('')}${gym ? `<span>${gym}</span>` : ''}${dPlan ? `<span class="x-stretch">Dehnen ${dDone} von ${dPlan}</span>` : ''}</div>
     <div class="wk">${days}</div>
-    <div class="h-leg"><span><i class="s-swim"></i>Schwimmen</span><span><i class="s-bike"></i>Rad</span><span><i class="s-run"></i>Laufen</span><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span><span>gefüllt = erledigt · Ring = offen</span></div>
+    <div class="h-leg"><span><i class="s-swim"></i>Schwimmen</span><span><i class="s-bike"></i>Rad</span><span><i class="s-run"></i>Laufen</span><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span>${weeklyLegend()}<span>gefüllt = erledigt · Ring = offen</span></div>
   </section>`;
 }
 
@@ -360,8 +374,10 @@ function gcalHtml(now, offset = 0, { compact = false } = {}) {
       if (wc.n < wc.target) dots.push({ c: 'strength', o: true });
     }
     const st = s.days.get(k);
-    if (hist.some((h) => h.date === k) || st === 'done' || st === 'late') dots.push({ c: 'stretch' });
+    if (hist.some((h) => h.date === k && h.routineId !== WEEKLY_ID()) || st === 'done' || st === 'late') dots.push({ c: 'stretch' });
     else if (k >= tKey && s.startKey && s.planOn(k) !== 'pause') dots.push({ c: 'stretch', o: true });
+    const wd = weeklyDot(k, tKey, hist);
+    if (wd) dots.push(wd);
     if (raceDays.has(k)) dots.push({ c: 'race', o: k > tKey });
     const first = i === 0 || day.getDate() === 1;
     cells.push(`<div class="c ${k === tKey ? 't' : k > tKey ? 'f' : ''}" title="${esc(fmtDate(k))}"><b>${first && !compact ? `${day.getDate()}.${day.getMonth() + 1}.` : day.getDate()}</b>${dotsHtml(dots)}</div>`);
@@ -371,7 +387,7 @@ function gcalHtml(now, offset = 0, { compact = false } = {}) {
   return `<div class="sec-head"><span class="k">Gym & Dehnen</span>
       ${compact ? '<span class="m small muted">5 Wochen</span>' : `<span class="gcal-nav"><button class="icon-btn sm" data-act="h-cal-prev" aria-label="Frühere Wochen">${ICONS.back}</button><span class="m small muted">${esc(range)}</span><button class="icon-btn sm" data-act="h-cal-next" aria-label="Spätere Wochen" ${offset === 0 ? 'disabled' : ''}>${ICONS.chevron}</button></span>`}</div>
     <div class="gcal">${WD_SHORT.map((x) => `<div class="h">${x}</div>`).join('')}${cells.join('')}</div>
-    <div class="h-leg"><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span><span><i class="s-race"></i>Wettkampf</span><span><i class="o"></i>geplant</span></div>`;
+    <div class="h-leg"><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span>${weeklyLegend()}<span><i class="s-race"></i>Wettkampf</span><span><i class="o"></i>geplant</span></div>`;
 }
 
 /* =========================================================================

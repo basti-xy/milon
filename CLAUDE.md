@@ -30,7 +30,7 @@ Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enth�
 - Alle Knöpfe gleich: Umriss 1,5 px Tinte, Pille, ≥ 44 px hoch – nichts gefüllt Schwarzes, nichts sticht heraus.
   Navigation: schwarze Pille unten mittig (Heute · Training · Werte), Einstellungen über das Zahnrad oben rechts.
 - Sport-Punkte mit Symbol (Wellen, Rad, Schuh, Hantel, Figur, Fahne) als CSS-Maske (`--ico` je `.s-<sport>` in `styles.css`):
-  gefüllter Kreis = erledigt, Ring (`o`) = offen/geplant. Gilt für `.sdot`, `.tw-dot`, `.dots i`, `.h-leg i`.
+  gefüllter Kreis = erledigt, Ring (`o`) = offen/geplant. Wochen-Routine eigener Punkt `.s-weekly` (`--sport-weekly`, `weeklyDot()` in `heute.js`). Gilt für `.sdot`, `.tw-dot`, `.dots i`, `.h-leg i`.
 - Schwarzes Layout nur beim Erfassen (Dehn-Player, Gym erfassen/bearbeiten, Abschluss-Seiten): `body.is-dark` überschreibt die
   Variablen (echtes Schwarz, Sportfarben aufgehellt). Schalter Mond/Sonne (`themeBtnHtml()`), Einstellung `captureDark`, `applyTheme()` in `app.js`.
 - Diagramme selbst als SVG: dünne Tintenlinien (1,3 px, `vector-effect: non-scaling-stroke`), Garmin-Schätzwerte grau, „G“-Kästchen.

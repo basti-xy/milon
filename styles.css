@@ -33,6 +33,7 @@
   --sport-strength: #6a5a8c;
   --sport-stretch: #2f7f78;
   --sport-race: #a57a1e;
+  --sport-weekly: #8e4f73; /* Wochen-Routine (Rumpf) */
   --race-text: #8a6516;
   /* Rollen im Player und in Zuständen */
   --left: #3d6e8f;
@@ -84,6 +85,7 @@ body.is-dark {
   --sport-strength: #ab9bd6;
   --sport-stretch: #62c2b7;
   --sport-race: #d9ac4c;
+  --sport-weekly: #d394b8;
   --race-text: #dfb75e;
   --left: #79acd0;
   --right: #ab9bd6;
@@ -254,6 +256,7 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .h-empty { padding: 10px 14px 14px; border-top: 1px solid var(--hair); color: var(--text-2); font-size: 13.5px; }
 .s-swim { --c: var(--sport-swim); } .s-bike { --c: var(--sport-bike); } .s-run { --c: var(--sport-run); }
 .s-strength, .s-gym { --c: var(--sport-strength); } .s-stretch { --c: var(--sport-stretch); } .s-race { --c: var(--sport-race); }
+.s-weekly { --c: var(--sport-weekly); --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='none'><rect x='5' y='3' width='6' height='5' rx='1.6'/><rect x='13' y='3' width='6' height='5' rx='1.6'/><rect x='5' y='9.5' width='6' height='5' rx='1.6'/><rect x='13' y='9.5' width='6' height='5' rx='1.6'/><rect x='5' y='16' width='6' height='5' rx='1.6'/><rect x='13' y='16' width='6' height='5' rx='1.6'/></svg>"); }
 
 /* Sport-Punkte mit Symbol: gefüllter Kreis = erledigt (Symbol ausgespart), Ring (Klasse o) = offen/geplant.
    Gilt für Listen (.sdot, .tw-dot), Wochenleisten und Kalender (.dots i) und Legenden (.h-leg i). */
@@ -269,7 +272,7 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 }
 .sdot { --d: 20px; }
 .tw-dot { --d: 15px; }
-:is(.sdot, .tw-dot, .dots i, .h-leg i):is(.s-swim, .s-bike, .s-run, .s-strength, .s-gym, .s-stretch, .s-race)::before {
+:is(.sdot, .tw-dot, .dots i, .h-leg i):is(.s-swim, .s-bike, .s-run, .s-strength, .s-gym, .s-stretch, .s-race, .s-weekly)::before {
   content: ""; position: absolute; inset: 18%; background: var(--tile);
   -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
 }

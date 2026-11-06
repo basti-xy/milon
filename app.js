@@ -560,7 +560,7 @@ function computeWeekly(history, now = new Date()) {
     best = Math.max(best, streak);
     prev = k;
   }
-  return { current, best, doneThisWeek, days, doneToday: days.has(dayKey(now)) };
+  return { current, best, doneThisWeek, weeks, days, doneToday: days.has(dayKey(now)) };
 }
 
 /* =========================================================================
