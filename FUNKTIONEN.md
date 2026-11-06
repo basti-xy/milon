@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v28 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v29 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -20,7 +20,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v28 (sc
 - [x] ◐ Wochenziel mit Punkten, Aussetzen (Grund) und Zurücknehmen, Abhaken, Erfassen
 - [x] ✓ Gym-Streak (Wochen, Joker pro Monat) – als Kachel auf Training und 12-Wochen-Raster
 - [x] ◐ Splits, nächster Split, letzte Einheiten (bearbeiten, löschen)
-- [x] ◐ Übungen mit Verlauf und Progressionshinweis „+x kg“, Übungsseite
+- [x] ◐ Übungen mit Verlauf und Progressionshinweis „Mehr Gewicht probieren“, Übungsseite
 - [x] ◐ Erfassen: Vorbelegung, Entwurf, Haken mit Uhrzeit, Satz hinzufügen/entfernen, Fokus „Jetzt dran“, Leiste „Noch x von y Sätzen“, Pausenbalken
 - [x] ◐ Erste Eingabe ersetzt die alte Zahl (iOS), Wake Lock beim Erfassen, Entwurf beim Sperren des Bildschirms
 - [x] ◐ Abschluss-Übersicht

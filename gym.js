@@ -221,7 +221,7 @@ function exerciseStats(exId) {
   for (const h of hist) for (const s of h.sets) if (!best || setScore(s) > setScore(best)) { best = s; bestDate = h.date; }
   return { hist, last, best, bestDate, tops: hist.map((h) => ({ date: h.date, top: topSet(h.sets) })) };
 }
-/** Hinweis, wenn beim letzten Mal alle Sätze das obere Ende erreicht haben. */
+/** Hinweis, wenn beim letzten Mal alle Sätze das Ziel (bei einer Spanne das obere Ende) erreicht haben. */
 function progressionHint(ex, stats) {
   if (!ex || !stats || !isTracked(ex)) return null;
   const range = repsRange(ex.reps);
@@ -230,8 +230,7 @@ function progressionHint(ex, stats) {
   if (sets.length < (ex.sets || 1) || !sets.every((s) => Number(s.reps) >= range[1])) return null;
   if (exUnit(ex) === 's') return '+5 s probieren';
   if (ex.bodyweight) return 'Mehr Wdh. oder Zusatzgewicht probieren';
-  const step = Number(ex.stepKg) || Number(gymPlans()?.settings?.progressionStepKg) || 2.5;
-  return `+${fmtKg(step)} kg probieren`;
+  return 'Mehr Gewicht probieren'; // Hanteln und Kabelturm steigen in unterschiedlichen Stufen – keine feste kg-Zahl
 }
 
 /* ---------- kleine Grafiken ---------- */
