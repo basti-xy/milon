@@ -33,7 +33,8 @@ Einstellungen (Zahnrad oben): Übergangszeiten, Töne, Sprachansage, Synchronisi
 | `sw.js` | Service Worker (Network-first, offline aus dem Cache) |
 
 Nach jeder Änderung die Versionen hochzählen: `?v=…` in `index.html` und `CACHE` in `sw.js`.
-Bestehende localStorage-Schlüssel (`dehnapp.*`) und Dateinamen im Daten-Repository nicht umbenennen.
+localStorage-Schlüssel heißen `milon.*` (früher `dehnapp.*`, beim Start einmalig übernommen – die alten bleiben vorerst als Rückfall).
+Schlüssel nur mit Migration umbenennen; Dateinamen im Daten-Repository (`dehn.json` usw. – benannt nach dem Bereich Dehnen) bleiben.
 
 ## Daten-Repository (privat)
 

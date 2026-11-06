@@ -1,6 +1,6 @@
 // Service Worker: Network-first, damit Updates sofort ankommen – offline wird aus dem Cache geliefert.
 // Die Routinen liegen nicht hier, sondern privat bei GitHub (die App speichert sie selbst zwischen).
-const CACHE = 'dehnapp-v25';
+const CACHE = 'milon-v26';
 const ASSETS = [
   './',
   'index.html',
@@ -23,8 +23,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      // nur eigene alte Versionen löschen – nicht den Speicher der Ansage-Aufnahmen der App
-      .then((keys) => Promise.all(keys.filter((k) => /^dehnapp-v\d+$/.test(k) && k !== CACHE).map((k) => caches.delete(k))))
+      // nur eigene alte Versionen löschen (auch die unter dem alten Namen „dehnapp-v…“) – nicht den Speicher der Ansage-Aufnahmen der App
+      .then((keys) => Promise.all(keys.filter((k) => /^(dehnapp|milon)-v\d+$/.test(k) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

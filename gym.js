@@ -10,10 +10,10 @@
 const GYM_PLANS_PATH = 'gym-plans.json';
 const GYM_LOG_PATH = 'gym.json';
 const GYM_KEYS = {
-  plans: 'dehnapp.gymplans.cache.v1',
-  sessions: 'dehnapp.gym.sessions.v1',
-  deleted: 'dehnapp.gym.deleted.v1',
-  draft: 'dehnapp.gym.draft.v1',
+  plans: 'milon.gymplans.cache.v1',
+  sessions: 'milon.gym.sessions.v1',
+  deleted: 'milon.gym.deleted.v1',
+  draft: 'milon.gym.draft.v1',
 };
 const BLOCK_LABEL = { warmup: 'Aufwärmen', ss1: 'Supersatz 1', ss2: 'Supersatz 2', optional: 'Optional', alt: 'Ersatz' };
 const COLLAPSED_BLOCKS = ['optional', 'alt'];

@@ -23,13 +23,13 @@ const weekdayName = (n) => new Date(2024, 0, 7 + n).toLocaleDateString('de-DE', 
 const MILESTONES = [7, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365, 500, 1000];
 
 const KEYS = {
-  settings: 'dehnapp.settings.v1',
-  history: 'dehnapp.history.v1',
-  deleted: 'dehnapp.deleted.v1',
-  meta: 'dehnapp.meta.v1',
-  routinesCache: 'dehnapp.routines.cache.v1',
-  voiceIndex: 'dehnapp.voice.index.v1',
-  trainingCache: 'dehnapp.training.cache.v1',
+  settings: 'milon.settings.v1',
+  history: 'milon.history.v1',
+  deleted: 'milon.deleted.v1',
+  meta: 'milon.meta.v1',
+  routinesCache: 'milon.routines.cache.v1',
+  voiceIndex: 'milon.voice.index.v1',
+  trainingCache: 'milon.training.cache.v1',
 };
 const SYNC_PATH = 'dehn.json';               // Verlauf im privaten GitHub-Daten-Repository
 const ROUTINES_PATH = 'dehn-routines.json';  // Routinen im selben Repository
@@ -71,10 +71,34 @@ const store = {
   },
 };
 
+/**
+ * Einmalige Umstellung der Speicher-Schlüssel von „dehnapp.*“ (alter App-Name) auf „milon.*“.
+ * Kopiert nur, wenn der neue Schlüssel noch fehlt – die alten Schlüssel bleiben als Rückfall stehen
+ * und werden erst später in einem eigenen Schritt entfernt. Läuft vor dem ersten Lesen (auch für gym.js/werte.js).
+ */
+(function migrateStorageKeys() {
+  try {
+    const OLD = 'dehnapp.';
+    const NEW = 'milon.';
+    const old = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(OLD) && k !== 'dehnapp.test') old.push(k);
+    }
+    for (const k of old) {
+      const nk = NEW + k.slice(OLD.length);
+      if (localStorage.getItem(nk) == null) localStorage.setItem(nk, localStorage.getItem(k));
+    }
+    if (old.length && localStorage.getItem('milon.migrated.v1') == null) {
+      localStorage.setItem('milon.migrated.v1', JSON.stringify({ at: new Date().toISOString(), keys: old.length }));
+    }
+  } catch { /* Speicher blockiert – checkStorage() meldet das */ }
+})();
+
 /** Prüft, ob localStorage wirklich schreib- und lesbar ist (z. B. nicht in privaten Fenstern blockiert). */
 function checkStorage() {
   try {
-    const k = 'dehnapp.test';
+    const k = 'milon.test';
     localStorage.setItem(k, '1');
     const ok = localStorage.getItem(k) === '1';
     localStorage.removeItem(k);
@@ -266,7 +290,7 @@ function deleteHistoryEntry(id) {
 /* ---------- Backup (Export / Import) ---------- */
 async function exportBackup() {
   const now = new Date();
-  const data = { app: 'dehnapp', version: 1, exportedAt: now.toISOString(), history: getHistory(), deleted: getDeleted(), gym: gymSnapshot() };
+  const data = { app: 'milon', version: 1, exportedAt: now.toISOString(), history: getHistory(), deleted: getDeleted(), gym: gymSnapshot() };
   const name = `milon-backup-${dayKey(now)}.json`;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   // Auf dem Handy über das Teilen-Menü (Dateien, Drive, Mail …), am PC als Download
@@ -274,7 +298,7 @@ async function exportBackup() {
   try {
     const file = new File([blob], name, { type: 'application/json' });
     if (touch && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Dehn-App Backup' });
+      await navigator.share({ files: [file], title: 'Milon Backup' });
       saveMeta({ lastBackupAt: now.toISOString() });
       return true;
     }
@@ -317,7 +341,7 @@ function mergeHistory(incoming) {
 
 /* ---------- GitHub-Sync ---------- */
 const validEntry = (h) => h && typeof h.id === 'string' && typeof h.routineId === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(h.date);
-const localSnapshot = () => ({ app: 'dehnapp', version: 1, history: getHistory(), deleted: getDeleted() });
+const localSnapshot = () => ({ app: 'milon', version: 1, history: getHistory(), deleted: getDeleted() });
 
 /** Vereinigung beider Stände: alle Einträge (nach id), minus alles, was irgendwo gelöscht wurde. */
 function mergeSnapshots(a, b) {
@@ -328,7 +352,7 @@ function mergeSnapshots(a, b) {
     if (validEntry(h) && !gone.has(h.id) && !byId.has(h.id)) byId.set(h.id, h);
   }
   const history = [...byId.values()].sort((x, y) => x.date.localeCompare(y.date) || String(x.completedAt).localeCompare(String(y.completedAt)) || x.id.localeCompare(y.id));
-  return { app: 'dehnapp', version: 1, history, deleted };
+  return { app: 'milon', version: 1, history, deleted };
 }
 const snapshotKey = (s) => JSON.stringify([(s?.history || []).map((h) => h.id).sort(), [...(s?.deleted || [])].sort()]);
 const sameSnapshot = (a, b) => snapshotKey(a) === snapshotKey(b);
@@ -351,7 +375,7 @@ async function runSync() {
       local: localSnapshot(),
       merge: mergeSnapshots,
       equals: sameSnapshot,
-      message: `Dehn-App: ${getHistory().length} Einheiten`,
+      message: `Milon: ${getHistory().length} Dehneinheiten`,
     });
     // Erneut mit dem aktuellen lokalen Stand mergen – falls während des Abgleichs etwas dazukam
     const merged = mergeSnapshots(localSnapshot(), res.data);
@@ -645,12 +669,30 @@ function speakSynth(text) {
  * richten sich nach der Medienlautstärke und werden für offline zwischengespeichert.
  */
 const VOICE_DIR = 'dehn-audio';
-const VOICE_CACHE = 'dehn-ansagen-v1';
+const VOICE_CACHE = 'milon-ansagen-v1';
+const OLD_VOICE_CACHE = 'dehn-ansagen-v1'; // alter Name – Inhalt wird einmalig übernommen, damit nichts neu geladen werden muss
 const voice = { index: null, files: new Map(), decoded: new Map(), sources: [], seq: 0 };
 const voiceKey = (t) => String(t).trim().toLowerCase().replace(/\s+/g, ' ');
 const hasCacheApi = 'caches' in window;
 
+/** Übernimmt die Aufnahmen aus dem alten Zwischenspeicher (alter App-Name) und löscht ihn danach. */
+async function migrateVoiceCache() {
+  if (!hasCacheApi) return;
+  try {
+    if (!(await caches.has(OLD_VOICE_CACHE))) return;
+    const from = await caches.open(OLD_VOICE_CACHE);
+    const to = await caches.open(VOICE_CACHE);
+    for (const req of await from.keys()) {
+      if (await to.match(req)) continue;
+      const res = await from.match(req);
+      if (res) await to.put(req, res);
+    }
+    await caches.delete(OLD_VOICE_CACHE);
+  } catch { /* egal – fehlende Aufnahmen werden sonst von GitHub nachgeladen */ }
+}
+
 async function loadVoiceIndex() {
+  await migrateVoiceCache();
   const gh = GHSync.getConfig();
   if (gh && navigator.onLine !== false) {
     try {

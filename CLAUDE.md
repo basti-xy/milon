@@ -1,6 +1,6 @@
 # Milon – Hinweise für die Entwicklung
 
-Öffentliches Repo `basti-xy/milon` (lokaler Ordner heißt noch `dehn-app`), GitHub Pages: https://basti-xy.github.io/milon/
+Öffentliches Repo `basti-xy/milon` (lokaler Ordner hieß früher `dehn-app`), GitHub Pages: https://basti-xy.github.io/milon/
 **Hier liegt nur Code. Nichts Persönliches** (Übungsnamen, Trainingsdaten, Wettkämpfe, Werte, Namen, E-Mail) –
 alles Inhaltliche liegt im privaten Repo `app-daten`. Vor jedem Push öffentliche Dateien auf persönliche Begriffe prüfen.
 
@@ -11,8 +11,10 @@ alles Inhaltliche liegt im privaten Repo `app-daten`. Vor jedem Push öffentlich
   `--sport-strength` #8a7dff (Lila, auch Gym), `--sport-race` #ffc24d (Goldgelb, Wettkampf). Punkt: `.tw-dot.s-<sport>`.
 - Mobile first (iPhone/iPad, Safe Areas), auch Tablet/Laptop. Offline-fähig (sw.js, Network-first).
 - Nach jeder Änderung `?v=…` in `index.html` und `CACHE` in `sw.js` hochzählen; neue Dateien in `ASSETS` von `sw.js`.
-- localStorage-Schlüssel `dehnapp.*` und Dateinamen in app-daten (`dehn.json`, `dehn-routines.json`, `dehn-audio/`, `gym.json` …)
-  **nie umbenennen** – sonst gehen Daten verloren. Gemeinsamer Token-Schlüssel aller eigenen Apps: `ghsync.config.v1`.
+- localStorage-Schlüssel heißen `milon.*`. Die alten `dehnapp.*` werden in `app.js` (`migrateStorageKeys`) beim Start
+  einmalig kopiert und bleiben vorerst als Rückfall stehen; Ansage-Cache `dehn-ansagen-v1` → `milon-ansagen-v1` (`migrateVoiceCache`).
+  Schlüssel **nur mit Migration** umbenennen. Dateinamen in app-daten (`dehn.json`, `dehn-routines.json`, `dehn-audio/`, `gym.json` …)
+  **nie umbenennen** – sonst gehen Daten verloren (ältere Geräte würden die alte Datei neu anlegen). Gemeinsamer Token-Schlüssel aller eigenen Apps: `ghsync.config.v1`.
 - Lokal testen: `py -m http.server 8010` im Ordner. Echte Daten zum Testen nur nach `.local/` kopieren (gitignored) und danach löschen.
 - Kleine Commits, README aktualisieren. Commits laufen unter der GitHub-noreply-Adresse (lokale git config).
 

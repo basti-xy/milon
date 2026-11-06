@@ -8,7 +8,7 @@
    ========================================================================= */
 
 const VALUES_PATH = 'training/values.json';
-const VALUES_KEY = 'dehnapp.values.cache.v1';
+const VALUES_KEY = 'milon.values.cache.v1';
 
 function valuesData() {
   const d = store.get(VALUES_KEY, null);
