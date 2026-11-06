@@ -69,8 +69,10 @@ Offline nutzt sie die zuletzt geladene Version.
 
 ## Streaks
 
-- **Dehnen:** erledigte Zyklus-Einheit = +1, geplanter Pausentag zählt automatisch mit. Ein verpasster Tag pro
-  Kalenderwoche wird von einem Joker abgefangen, danach beginnt die Streak neu. Die Wochen-Routine hat eine eigene Wochen-Streak.
+- **Dehnen:** fester Kalender – der Zyklus läuft ab der ersten Einheit Tag für Tag weiter und verschiebt sich nie.
+  Geplante Einheit erledigt = +1, geplanter Pausentag zählt automatisch mit. Eine verpasste Einheit kann am Folgetag
+  nachgeholt werden und zählt dann für den verpassten Tag (an einem Dehntag ist dessen eigene Einheit zusätzlich fällig).
+  Nicht nachgeholt: ein Joker pro Kalenderwoche fängt den Tag ab, danach beginnt die Streak neu. Die Wochen-Routine hat eine eigene Wochen-Streak.
 - **Gym:** Wochen (Mo–So) in Folge mit mindestens `weeklyTarget` Einheiten (abgehakt oder ausführlich). Die laufende Woche
   bleibt offen. Ein Joker pro Kalendermonat (Monat des Donnerstags der Woche) fängt eine verpasste Woche ab, die Streak
   bleibt dann stehen; die zweite verpasste Woche im selben Monat setzt sie auf 0. **Aussetzen** (z. B. Tag nach einem

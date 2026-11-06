@@ -430,20 +430,23 @@ async function importBackup(file) {
 }
 
 /**
- * Rhythmus-Streak: Tag für Tag ab der ersten Einheit durchspielen.
- *  - Dehneinheit aus dem Zyklus erledigt → +1, Zyklus geht nach der erledigten Routine weiter
- *  - geplanter Pausentag → +1 (Pause gehört zum Plan)
- *  - verpasster Dehntag → 1 Joker pro Kalenderwoche fängt ihn ab (Streak bleibt, +0),
- *    sonst Reset auf 0. Der Zyklus bleibt stehen (Vorschlag = nächster Plan nach der letzten Einheit).
- *  - heute noch offen → zählt (noch) nicht als verpasst.
+ * Rhythmus-Streak mit festem Kalender: Der Zyklus läuft ab der ersten Einheit Tag für Tag weiter,
+ * unabhängig davon, was erledigt wurde – es verschiebt sich nichts.
+ *  - geplante Einheit am Tag erledigt → +1 ('done')
+ *  - geplanter Pausentag → +1 ('pause')
+ *  - verpasste Einheit am Folgetag nachgeholt → zählt für den verpassten Tag ('late', +1, kein Joker).
+ *    Ist der Folgetag ein Dehntag, ist dessen eigene Einheit zusätzlich fällig.
+ *  - nicht nachgeholt → 1 Joker pro Kalenderwoche fängt den Tag ab (+0), sonst Reset auf 0
+ *  - heute offen bzw. gestern offen und heute noch nachholbar ('owed') → zählt (noch) nicht als verpasst
  */
 function computeStreak(history, now = new Date()) {
   const cyc = cycleList();
   const tKey = dayKey(now);
   const result = {
     current: 0, best: 0, days: new Map(), doneByDay: new Map(),
-    expectedToday: cyc[0] || null, doneToday: null, nextIdx: 0,
+    expectedToday: cyc[0] || null, doneToday: null, nextIdx: 0, owed: null, madeUpToday: null,
     todayStatus: 'open', jokerUsedThisWeek: false, startKey: null,
+    planOn: (k) => cyc[0] || null, // geplante Einheit an einem Tag (auch in der Zukunft)
   };
   if (!cyc.length) return result;
 
@@ -456,40 +459,59 @@ function computeStreak(history, now = new Date()) {
   }
   if (!entries.length) return result;
 
+  // Anker: erste Einheit überhaupt – ab da steht für jeden Kalendertag fest, was dran ist
   result.startKey = entries[0].date;
-  const jokerWeeks = new Set();
-  let current = 0, best = 0, expIdx = 0;
+  const start = parseDay(result.startKey);
+  const startIdx = Math.max(0, cyc.indexOf(entries[0].routineId));
+  const idxOn = (k) => {
+    const n = Math.round((parseDay(k) - start) / 86400000); // Sommer-/Winterzeit: runden
+    return (((startIdx + n) % cyc.length) + cyc.length) % cyc.length;
+  };
+  result.planOn = (k) => cyc[idxOn(k)];
 
-  for (let d = parseDay(result.startKey); dayKey(d) <= tKey; d = addDays(d, 1)) {
+  // 1. Status jedes Tages (Nachholen am Folgetag berücksichtigen)
+  const status = new Map();
+  let owed = null; // { key, routine } – gestern fällig, noch nicht erledigt
+  for (let d = start; dayKey(d) <= tKey; d = addDays(d, 1)) {
     const k = dayKey(d);
-    const isToday = k === tKey;
-    if (isToday) result.expectedToday = cyc[expIdx];
-    const done = result.doneByDay.get(k);
-    if (done) {
-      const last = done[done.length - 1];
-      expIdx = (cyc.indexOf(last) + 1) % cyc.length;
-      current++;
-      result.days.set(k, 'done');
-      if (isToday) result.doneToday = last;
-    } else if (cyc[expIdx] === 'pause') {
-      current++;
-      result.days.set(k, 'pause');
-      expIdx = (expIdx + 1) % cyc.length;
-    } else if (isToday) {
-      result.days.set(k, 'open');
-    } else if (current > 0 && !jokerWeeks.has(weekKey(d))) {
-      jokerWeeks.add(weekKey(d));
-      result.days.set(k, 'joker');
-    } else {
-      current = 0;
-      result.days.set(k, 'missed');
+    const plan = cyc[idxOn(k)];
+    const done = [...(result.doneByDay.get(k) || [])];
+    if (owed) {
+      const i = done.indexOf(owed.routine);
+      if (i >= 0) { status.set(owed.key, 'late'); done.splice(i, 1); if (k === tKey) result.madeUpToday = owed.routine; }
+      else status.set(owed.key, k === tKey ? 'owed' : 'missed');
+      if (k === tKey && i < 0) result.owed = owed.routine;
+      owed = null;
+    }
+    if (plan === 'pause') status.set(k, 'pause');
+    else if (done.includes(plan)) status.set(k, 'done');
+    else if (k === tKey) status.set(k, 'open');
+    else owed = { key: k, routine: plan };
+  }
+
+  // 2. Streak: erledigt, nachgeholt und Pause zählen; verpasst → Joker oder Reset
+  const jokerWeeks = new Set();
+  let current = 0, best = 0;
+  for (let d = start; dayKey(d) <= tKey; d = addDays(d, 1)) {
+    const k = dayKey(d);
+    const st = status.get(k);
+    if (st === 'done' || st === 'late' || st === 'pause') current++;
+    else if (st === 'missed') {
+      if (current > 0 && !jokerWeeks.has(weekKey(d))) { jokerWeeks.add(weekKey(d)); status.set(k, 'joker'); }
+      else current = 0;
     }
     best = Math.max(best, current);
   }
 
+  const todayList = result.doneByDay.get(tKey);
+  result.days = status;
   Object.assign(result, {
-    current, best, nextIdx: expIdx,
-    todayStatus: result.days.get(tKey) || 'open',
+    current, best,
+    expectedToday: cyc[idxOn(tKey)],
+    nextIdx: idxOn(dayKey(addDays(now, 1))),
+    doneToday: todayList ? todayList[todayList.length - 1] : null,
+    // Pausentag mit nachgeholter Einheit gilt als erledigt
+    todayStatus: status.get(tKey) === 'pause' && result.madeUpToday ? 'done' : status.get(tKey) || 'open',
     jokerUsedThisWeek: jokerWeeks.has(weekKey(now)),
   });
   return result;
@@ -1133,10 +1155,22 @@ function todayHtml(s, a, now) {
     : '';
 
   let main;
-  if (s.doneToday) {
+  const owedR = s.owed ? routineById(s.owed) : null;
+  if (owedR) {
+    // Gestern verpasst – heute nachholen, dann zählt der Tag (der Rhythmus verschiebt sich nicht)
+    const todayR = expected !== 'pause' && s.todayStatus !== 'done' ? routineById(expected) : null;
+    main = `<section class="card today">
+      <div class="today-label">Von gestern nachholen</div>
+      <h2 class="today-title"><span>${esc(shortName(owedR))}</span></h2>
+      <p class="today-sub">Zählt noch für gestern – der Rhythmus bleibt, wie er ist.${expected === 'pause' ? ' Heute ist Pausentag, ideal zum Nachholen.' : ''}</p>
+      ${startLink(owedR, 'Nachholen')}
+      ${todayR ? `<a class="extra-offer" href="#/routine/${encodeURIComponent(todayR.id)}"><span><strong>Heute außerdem dran:</strong> ${esc(shortName(todayR))} <span class="muted">· ${fmtDuration(totalDuration(todayR))}</span></span>${ICONS.chevron}</a>` : ''}
+      ${extraHtml}
+    </section>`;
+  } else if (s.todayStatus === 'done') {
     main = `<section class="card today is-done">
-      <div class="today-label">Heute erledigt</div>
-      <h2 class="today-title">${ICONS.check}<span>${esc(planName(s.doneToday))}</span></h2>
+      <div class="today-label">${s.madeUpToday && expected === 'pause' ? 'Heute nachgeholt' : 'Heute erledigt'}</div>
+      <h2 class="today-title">${ICONS.check}<span>${esc(planName(s.madeUpToday && expected === 'pause' ? s.madeUpToday : expected))}</span></h2>
       <p class="today-sub">Morgen: <strong>${esc(planName(nextExpected(s)))}</strong></p>
       ${extraHtml}
     </section>`;
@@ -1153,7 +1187,7 @@ function todayHtml(s, a, now) {
       ? `<section class="card today">
           <div class="today-label">Heute dran</div>
           <h2 class="today-title"><span>${esc(shortName(r))}</span></h2>
-          <p class="today-sub">${r.exercises.length} Übungen · ${fmtDuration(totalDuration(r))}</p>
+          <p class="today-sub">${r.exercises.length} Übungen · ${fmtDuration(totalDuration(r))}${s.madeUpToday ? ` · ${esc(shortName(routineById(s.madeUpToday)))} von gestern nachgeholt ✓` : ''}</p>
           ${startLink(r)}
           ${extraHtml}
         </section>`
@@ -1184,6 +1218,7 @@ function todayHtml(s, a, now) {
 
 function streakMessage(s) {
   if (!s.startKey) return 'Deine Streak startet mit der ersten Einheit. Pausentage im Plan zählen automatisch mit.';
+  if (s.owed) return 'Gestern ist noch offen – heute nachholen, dann zählt der Tag ohne Joker.';
   if (s.todayStatus === 'done') {
     if (s.current >= s.best && s.best > 1) return 'Heute erledigt – das ist dein Rekord!';
     if (s.best > s.current) return `Heute erledigt – noch ${s.best - s.current} ${plural(s.best - s.current, 'Tag', 'Tage')} bis zum Rekord.`;
@@ -1218,10 +1253,9 @@ function calendarHtml(s, a, now) {
   const cyc = cycleList();
   const tKey = dayKey(now);
   const start = addDays(weekStart(now), -28);
-  // Vorschau auf die kommenden Tage (Plan läuft weiter, als würde heute erledigt)
-  let projIdx = s.todayStatus === 'open' ? s.nextIdx + 1 : s.nextIdx;
-  if (!s.startKey) projIdx = 1;
-  const labels = { done: 'erledigt', pause: 'Pause', joker: 'Joker', missed: 'verpasst', open: 'heute offen' };
+  // Vorschau auf die kommenden Tage: fester Kalender (ohne erste Einheit: Zyklus ab morgen weiterzählen)
+  let projIdx = 1;
+  const labels = { done: 'erledigt', late: 'am Folgetag nachgeholt', owed: 'heute nachholbar', pause: 'Pause', joker: 'Joker', missed: 'verpasst', open: 'heute offen' };
   const cells = [];
   for (let i = 0; i < 35; i++) {
     const d = addDays(start, i);
@@ -1230,11 +1264,11 @@ function calendarHtml(s, a, now) {
     let letter = '';
     if (k > tKey) {
       status = 'future';
-      letter = cyc.length ? planLetter(cyc[projIdx++ % cyc.length]) : '';
+      letter = !cyc.length ? '' : planLetter(s.startKey ? s.planOn(k) : cyc[projIdx++ % cyc.length]);
     } else if (!status) {
       status = k === tKey ? 'open' : 'none';
     }
-    if (status === 'done') { const list = s.doneByDay.get(k); letter = planLetter(list[list.length - 1]); }
+    if (status === 'done' || status === 'late' || status === 'owed') letter = planLetter(s.planOn(k));
     if (status === 'pause') letter = 'P';
     if (status === 'open') letter = cyc.length ? planLetter(s.expectedToday) : '';
     if (status === 'joker') letter = 'J';
@@ -1246,6 +1280,7 @@ function calendarHtml(s, a, now) {
   return `<div class="cal" role="img" aria-label="Letzte 5 Wochen">${heads}${cells.join('')}</div>
     <div class="cal-legend">
       <span><i class="lg st-done"></i>erledigt</span>
+      <span><i class="lg st-late"></i>nachgeholt</span>
       <span><i class="lg st-pause"></i>Pause</span>
       <span><i class="lg st-joker"></i>Joker</span>
       <span><i class="lg st-missed"></i>verpasst</span>
