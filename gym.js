@@ -428,17 +428,21 @@ function exerciseRowHtml(ex, splitId) {
 }
 
 /* ---------- Einheit erfassen / bearbeiten ---------- */
-/** Vorbelegung: Werte vom letzten Mal, sonst aus dem Plan. */
+/** Wiederholungsziel aus dem Plan (bei einer Spanne das obere Ende), "max −2" → leer. */
+function repTarget(ex) {
+  const range = repsRange(ex?.reps);
+  return range ? range[1] : '';
+}
+/** Vorbelegung: Gewicht vom letzten Mal (sonst aus dem Plan), Wiederholungen immer das Ziel aus dem Plan. */
 function prefillSets(ex) {
   const st = exerciseStats(ex.id);
   const n = Math.max(1, ex.sets || 1);
-  const range = repsRange(ex.reps);
   const out = [];
   for (let i = 0; i < n; i++) {
     const lastSet = st?.last.sets[Math.min(i, st.last.sets.length - 1)];
     out.push({
       kg: ex.bodyweight ? '' : (lastSet?.kg ?? planKgForSet(ex, i) ?? ''),
-      reps: lastSet?.reps ?? (range ? range[0] : ''),
+      reps: repTarget(ex),
       done: false,
     });
   }
@@ -589,7 +593,7 @@ function drawGymLog() {
   const hiddenCount = sp.exercises.filter((ex) => COLLAPSED_BLOCKS.includes(ex.block)).length;
   gymFocusId = d.sessionId ? null : focusExercise(groups); // beim Bearbeiten alter Einheiten kein Fokus
   app.innerHTML = `<div class="page page-gymlog">
-    ${topbar({ backHref: '#/gym', title: esc(d.sessionId ? 'Einheit bearbeiten' : 'Einheit erfassen') })}
+    ${topbar({ backHref: '#/gym', title: esc(d.sessionId ? 'Einheit bearbeiten' : 'Einheit erfassen'), right: themeBtnHtml() })}
     <h1 class="ov-title">${esc(sp.name)}</h1>
     <div class="gl-meta">
       <label>Datum <input type="date" data-gym-field="date" value="${esc(d.date)}" max="${todayKey()}"></label>
@@ -623,12 +627,13 @@ function exerciseLogHtml(ex) {
       <div>
         ${isFocus ? '<div class="gl-now">Jetzt dran</div>' : ''}
         <div class="gl-ex-name">${complete ? `${ICONS.check} ` : ''}${esc(ex.name)}</div>
-        <div class="gl-target">${esc(planTarget(ex))}${ex.perSide ? ' <span>pro Seite</span>' : ''}</div>
+        <div class="gl-target"><span class="gl-target-k">Ziel</span>${esc(planTarget(ex))}${exUnit(ex) === 's' ? '' : ' <span>Wdh.</span>'}${ex.perSide ? ' <span>pro Seite</span>' : ''}</div>
         <div class="small muted">${[ex.bodyweight ? 'Körpergewicht' : '', ex.kgTarget ? `Ziel ${fmtKg(ex.kgTarget)} kg` : '', ex.restSec ? `Pause ${Math.floor(ex.restSec / 60)}:${pad2(ex.restSec % 60)}` : ''].filter(Boolean).map(esc).join(' · ')}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-act="gym-all-done" data-ex="${esc(ex.id)}">Alle ✓</button>
     </div>
     ${hint ? `<div class="exp-hint">${ICONS.flame}<span>${esc(hint)}</span></div>` : ''}
+    ${ex.repsWhy ? `<details class="benefit gl-why"><summary>Warum ${esc(ex.reps)}${exUnit(ex) === 's' ? ' s' : ''}?</summary><p>${esc(ex.repsWhy)}</p></details>` : ''}
     ${st ? `<div class="small muted">Letztes Mal (${esc(fmtDate(st.last.date))}): ${esc(st.last.sets.map((s) => fmtSet(s, ex)).join(', '))}</div>` : ''}
     ${ex.note || ex.alt ? `<details class="benefit"><summary>Hinweis</summary>${ex.note ? `<p>${esc(ex.note)}</p>` : ''}${ex.alt ? `<p><strong>Alternative:</strong> ${esc(ex.alt)}</p>` : ''}${ex.why ? `<p class="muted">${esc(ex.why)}</p>` : ''}</details>` : ex.why ? `<details class="benefit"><summary>Nutzen</summary><p>${esc(ex.why)}</p></details>` : ''}
     <div class="gl-sets">
