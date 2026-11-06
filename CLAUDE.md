@@ -5,10 +5,7 @@
 alles Inhaltliche liegt im privaten Repo `app-daten`. Vor jedem Push öffentliche Dateien auf persönliche Begriffe prüfen.
 
 ## Regeln
-- Vanilla JS, kein Framework, kein Build. Dunkles Design über CSS-Variablen (`--accent`, `--accent-grad`, `--good` …).
-- **Standardfarben der Sportarten** (überall verwenden, wo Sportarten erscheinen): `--sport-swim` #7cc4ff (Hellblau),
-  `--sport-bike` #3ddc97 (Grün), `--sport-run` #f0506e (Karmin – bewusst nicht das Fehler-Rot `--danger`),
-  `--sport-strength` #8a7dff (Lila, auch Gym), `--sport-race` #ffc24d (Goldgelb, Wettkampf). Punkt: `.tw-dot.s-<sport>`.
+- Vanilla JS, kein Framework, kein Build. Offline-fähig.
 - Mobile first (iPhone/iPad, Safe Areas), auch Tablet/Laptop. Offline-fähig (sw.js, Network-first).
 - Nach jeder Änderung `?v=…` in `index.html` und `CACHE` in `sw.js` hochzählen; neue Dateien in `ASSETS` von `sw.js`.
 - localStorage-Schlüssel heißen `milon.*`. Die alten `dehnapp.*` werden in `app.js` (`migrateStorageKeys`) beim Start
@@ -18,9 +15,30 @@ alles Inhaltliche liegt im privaten Repo `app-daten`. Vor jedem Push öffentlich
 - Lokal testen: `py -m http.server 8010` im Ordner. Echte Daten zum Testen nur nach `.local/` kopieren (gitignored) und danach löschen.
 - Kleine Commits, README aktualisieren. Commits laufen unter der GitHub-noreply-Adresse (lokale git config).
 
+## Design (Entwurf „D“, Druck-Look – ersetzt das frühere dunkle Design)
+Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enthält Beispielwerte – nie hierher kopieren).
+- Farben nur über CSS-Variablen in `styles.css`: Papier `--paper` #eeeae1, Kachel `--tile` #f7f4ee, Rand `--line` #d6cfc2,
+  Haarlinie `--hair` #e2dbcf, Tinte `--ink` #1e1c19, Text 2 `--text-2` #625c53, Text 3 `--text-3` #8f877b (nur Linien/Symbole –
+  für kleinen Text zu wenig Kontrast), gut `--good` #4e7a45, schlecht `--bad` #a9443a.
+- Sportarten gedämpft: Schwimmen `--sport-swim` #3d6e8f, Rad `--sport-bike` #4e7a45, Laufen `--sport-run` #a9443a,
+  Gym/Kraft `--sport-strength` #6a5a8c, Dehnen `--sport-stretch` #2f7f78, Wettkampf `--sport-race` #a57a1e (als Text `--race-text` #8a6516).
+  Punkte: `.sdot.s-<sport>`, in Leisten `.dots i.s-<sport>` (Klasse `o` = Ring/offen). Text-Kontrast ≥ 4,5 : 1 auf `--tile` prüfen.
+- Schriften selbst gehostet (`fonts/`, in `sw.js` ASSETS): Newsreader (Überschriften, große Zahlen, `lining-nums tabular-nums`),
+  IBM Plex Sans (Text; Labels `.k` in Kapitälchen-Stil, 10,5 px, Sperrung .12em), IBM Plex Mono (kleine Zahlen). Kein Google-Fonts-CDN.
+- Kacheln Radius 14 px, 1 px Rand, keine Schatten, keine Verläufe, kein Blur, kein Leuchten, keine Emojis.
+  Papierkörnung: kleine gekachelte SVG-Rauschfläche in `body::before` (auf dem iPad auf Performance achten, sonst PNG).
+- Alle Knöpfe gleich: Umriss 1,5 px Tinte, Pille, ≥ 44 px hoch – nichts gefüllt Schwarzes, nichts sticht heraus.
+  Navigation: schwarze Pille unten mittig (Heute · Training · Werte), Einstellungen über das Zahnrad oben rechts.
+- Diagramme selbst als SVG: dünne Tintenlinien (1,3 px, `vector-effect: non-scaling-stroke`), Garmin-Schätzwerte grau, „G“-Kästchen.
+- Layout: iPhone (ab 375 px) eine Spalte, ab 768 px 2 Spalten, ab 1180 px (iPad 13″ quer) 4 Spalten. Testen bei 390 × 844,
+  820 × 1180, 1376 × 1032. Safe Areas beachten.
+- Tagesdaten aus `health/daily.json` / `history.json` über `GHSync.readFile`, Cache `milon.health.cache.v1` / `milon.health.history.v1`.
+  Garmin-Schätzwerte (Body Battery, Stress, Schlafscore, HRV-Normalbereich) immer als „von Garmin berechnet“ kennzeichnen.
+
 ## Aufbau
-`app.js` (Router, Tab-Leiste, Dehnen, Player, Ansagen, Trainingswoche, Einstellungen, Sync, Backup) ·
-`gym.js` (Gym) · `werte.js` (Werte) · `sync.js` (GHSync) · `audio-test/` (Testseite für Audio auf dem iPad).
+`app.js` (Router, Navigation, Dehnen, Player, Ansagen, Trainingswoche, Einstellungen, Sync, Backup) ·
+`heute.js` (Heute, Auswertung, Körper-Details, Training) · `gym.js` (Gym) · `werte.js` (Werte) · `sync.js` (GHSync) ·
+`audio-test/` (Testseite für Audio auf dem iPad). Funktionsliste zum Abhaken bei Umbauten: `FUNKTIONEN.md`.
 Sync-Muster: `GHSync.syncFile(path, { local, merge, equals })` + Löschmarkierungen; Merge pro Eintrag nach `id`
 (Gym: neueste `updatedAt` gewinnt). Unterseiten mit Eingaben nicht durch `rerenderCurrent()` neu zeichnen.
 
