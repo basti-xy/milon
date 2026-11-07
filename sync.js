@@ -78,6 +78,11 @@ const GHSync = (() => {
     throw new SyncError('other', `GitHub-Fehler ${res.status}${detail ? `: ${detail}` : ''}`, res.status);
   }
 
+  /** Beliebiger Aufruf der GitHub-API für das verbundene Repository (Pfad ab /repos/<owner>/<repo>). */
+  function repoApi(cfg, method, path, body) {
+    return api(cfg, method, `/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}${path}`, body);
+  }
+
   /** Prüft Zugriff auf das Repository. Liefert { private, fullName }. */
   async function testRepo(cfg) {
     const r = await api(cfg, 'GET', `/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`);
@@ -168,5 +173,5 @@ const GHSync = (() => {
     throw new SyncError('conflict', 'Abgleich fehlgeschlagen (mehrfache gleichzeitige Änderung).');
   }
 
-  return { getConfig, setConfig, clearConfig, testRepo, readFile, readRaw, writeFile, syncFile, SyncError };
+  return { getConfig, setConfig, clearConfig, testRepo, readFile, readRaw, writeFile, syncFile, repoApi, SyncError };
 })();
