@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v30 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v31 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -50,6 +50,8 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v30 (sc
 ## Einstellungen & Daten
 - [x] ✓ Übergangszeiten, Töne, Sprachansage, Testknöpfe, Auto-Weiter, Zurücksetzen
 - [x] ✓ Gym-Tage (neu, Standard Mo/Mi/Fr)
+- [x] ✓ Darstellung der App: Hell / Dunkel / Automatisch – unabhängig von „Beim Erfassen: Hell / Schwarz“
+- [x] ◐ „Garmin & Plan jetzt abrufen“: startet den Workflow Tagesdaten, zeigt Fortschritt, lädt danach neu; Hinweis bei fehlender Token-Berechtigung (mit echter GitHub-Antwort am Gerät prüfen)
 - [x] ◐ Einheit nachtragen, Verlauf mit Löschen
 - [x] ◐ Backup speichern / einspielen, Erinnerung
 - [x] ◐ Sync verbinden, abgleichen, trennen; Status-Punkt am Zahnrad

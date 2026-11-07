@@ -31,8 +31,10 @@ Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enth�
   Navigation: schwarze Pille unten mittig (Heute · Training · Werte), Einstellungen über das Zahnrad oben rechts.
 - Sport-Punkte mit Symbol (Wellen, Rad, Schuh, Hantel, Figur, Fahne) als CSS-Maske (`--ico` je `.s-<sport>` in `styles.css`):
   gefüllter Kreis = erledigt, Ring (`o`) = offen/geplant. Wochen-Routine eigener Punkt `.s-weekly` (`--sport-weekly`, `weeklyDot()` in `heute.js`). Gilt für `.sdot`, `.tw-dot`, `.dots i`, `.h-leg i`.
-- Schwarzes Layout nur beim Erfassen (Dehn-Player, Gym erfassen/bearbeiten, Abschluss-Seiten): `body.is-dark` überschreibt die
-  Variablen (echtes Schwarz, Sportfarben aufgehellt). Schalter Mond/Sonne (`themeBtnHtml()`), Einstellung `captureDark`, `applyTheme()` in `app.js`.
+- Dunkel: `body.is-dark` überschreibt die Variablen (echtes Schwarz, Sportfarben aufgehellt). Zwei **unabhängige** Einstellungen
+  (Wunsch des Nutzers – App kann hell bleiben, während das Erfassen schwarz ist): `captureDark` für Erfassen (Dehn-Player,
+  Gym erfassen/bearbeiten, Abschluss-Seiten; Mond/Sonne-Knopf `themeBtnHtml()` dort und in den Einstellungen) und `appTheme`
+  (`light` | `dark` | `auto` = wie das Gerät) für alle übrigen Seiten. Logik in `applyTheme()` (`app.js`).
 - Diagramme selbst als SVG: dünne Tintenlinien (1,3 px, `vector-effect: non-scaling-stroke`), Garmin-Schätzwerte grau, „G“-Kästchen.
 - Layout: iPhone (ab 375 px) eine Spalte, ab 768 px 2 Spalten, ab 1180 px (iPad 13″ quer) 4 Spalten. Testen bei 390 × 844,
   820 × 1180, 1376 × 1032. Safe Areas beachten.
@@ -41,7 +43,7 @@ Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enth�
 
 ## Aufbau
 `app.js` (Router, Navigation, Dehnen, Player, Ansagen, Trainingswoche, Einstellungen, Sync, Backup) ·
-`heute.js` (Heute, Auswertung, Körper-Details, Training) · `gym.js` (Gym) · `werte.js` (Werte) · `sync.js` (GHSync) ·
+`heute.js` (Heute, Auswertung, Körper-Details, Training, „Garmin & Plan jetzt abrufen“ per `workflow_dispatch` des Workflows `taeglich.yml` – Token braucht dafür Actions: Read and write) · `gym.js` (Gym) · `werte.js` (Werte) · `sync.js` (GHSync) ·
 `audio-test/` (Testseite für Audio auf dem iPad). Funktionsliste zum Abhaken bei Umbauten: `FUNKTIONEN.md`.
 Sync-Muster: `GHSync.syncFile(path, { local, merge, equals })` + Löschmarkierungen; Merge pro Eintrag nach `id`
 (Gym: neueste `updatedAt` gewinnt). Unterseiten mit Eingaben nicht durch `rerenderCurrent()` neu zeichnen.

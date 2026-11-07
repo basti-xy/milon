@@ -23,7 +23,9 @@ Unterseiten: `#/auswertung` (bisherige Karte *Trainingswoche*: Stunden → Erken
 und flüssig laufendem Balken; die erste Eingabe ersetzt die alte Zahl, „Jetzt dran“-Fokus, Bildschirm bleibt an, danach Abschluss-Übersicht.
 Vorbelegt: Gewicht vom letzten Mal, Wiederholungen = **Ziel aus dem Plan** (`reps`, Begründung `repsWhy` unter „Warum …?“).
 
-Einstellungen (Zahnrad oben rechts): Übergangszeiten, Töne, Sprachansage, **Gym-Tage** (Standard Mo/Mi/Fr), Synchronisierung,
+Einstellungen (Zahnrad oben rechts): Übergangszeiten, Töne, Sprachansage, **Gym-Tage** (Standard Mo/Mi/Fr), **Darstellung**
+(App hell/dunkel/automatisch, Erfassen hell/schwarz – unabhängig), **Garmin & Plan jetzt abrufen** (startet den Workflow
+„Tagesdaten“ im Daten-Repository; Token braucht dafür zusätzlich *Actions: Read and write*), Synchronisierung,
 Backup, Einheit nachtragen.
 
 ## Design
