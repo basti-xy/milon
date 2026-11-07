@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v32 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v33 (Schätzung der Schwellen unter Werte).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -49,6 +49,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v32 (sc
 
 ## Werte
 - [x] ✓ Gruppen, Verlauf als Linie, PR-Verbesserung, Trendpfeile (iPad 2 Spalten)
+- [x] ✓ Unter FTP, Schwellentempo und CSS grau die Schätzung aus dem Training (Spanne, Stand, ggf. Vorschlag), Tipp öffnet Belastung (v33)
 
 ## Einstellungen & Daten
 - [x] ✓ Übergangszeiten, Töne, Sprachansage, Testknöpfe, Auto-Weiter, Zurücksetzen

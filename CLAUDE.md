@@ -44,7 +44,7 @@ Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enth�
 ## Aufbau
 `app.js` (Router, Navigation, Dehnen, Player, Ansagen, Trainingswoche, Einstellungen, Sync, Backup) ·
 `belastung.js` (Kachel Belastung und `#/belastung`: Fitness/Ermüdung/Form aus `daily.json → load` und `history.json → load`; berechnet aus Watt, Pace und Puls, daher kein „G“; Diagramme mit HTML-Achsenbeschriftung, weil Text im gestreckten SVG verzerrt) ·
-`heute.js` (Heute, Auswertung, Körper-Details, Training, „Garmin & Plan jetzt abrufen“ per `workflow_dispatch` des Workflows `taeglich.yml` – Token braucht dafür Actions: Read and write) · `gym.js` (Gym) · `werte.js` (Werte) · `sync.js` (GHSync) ·
+`heute.js` (Heute, Auswertung, Körper-Details, Training, „Garmin & Plan jetzt abrufen“ per `workflow_dispatch` des Workflows `taeglich.yml` – Token braucht dafür Actions: Read and write) · `gym.js` (Gym) · `werte.js` (Werte; unter FTP/Schwellentempo/CSS die Schätzung aus `daily.json → load.estimates`, nur Info – gültig bleibt `values.json`) · `sync.js` (GHSync) ·
 `audio-test/` (Testseite für Audio auf dem iPad). Funktionsliste zum Abhaken bei Umbauten: `FUNKTIONEN.md`.
 Sync-Muster: `GHSync.syncFile(path, { local, merge, equals })` + Löschmarkierungen; Merge pro Eintrag nach `id`
 (Gym: neueste `updatedAt` gewinnt). Unterseiten mit Eingaben nicht durch `rerenderCurrent()` neu zeichnen.
