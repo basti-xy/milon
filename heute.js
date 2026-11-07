@@ -31,7 +31,7 @@ async function loadHealth() {
       if (JSON.stringify(r.data) !== JSON.stringify(store.get(key, null))) { store.set(key, r.data); changed = true; }
     } catch { /* offline oder Datei fehlt – letzter Stand bleibt */ }
   }
-  if (changed && ['home', 'koerper', 'training'].includes(currentRoute().name)) rerenderCurrent();
+  if (changed && ['home', 'koerper', 'training', 'belastung'].includes(currentRoute().name)) rerenderCurrent();
 }
 
 /* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
@@ -193,6 +193,7 @@ function renderHeute() {
       ${assessHtml(d)}
       ${todoHtml(d, s, a, now)}
       ${metricsHtml(d)}
+      ${loadTileHtml()}
       ${weekCardHtml(d, wk, s, now)}
       ${racesHtml(d, now)}
       <section class="tile gcal-card" id="h-cal">${gcalHtml(now, 0, { compact: true })}</section>
@@ -609,6 +610,7 @@ function renderTraining() {
 
 /* ---------- Aktionen (data-act="h-…") ---------- */
 function handleHeuteAction(act, el) {
+  if (handleLoadAction(act, el)) return; // belastung.js
   if (act === 'h-refresh') { refreshHealthNow(); return; }
   if (act === 'h-kd-range') { kdDays = Number(el.dataset.days) || 30; renderKoerper(currentRoute().arg); return; }
   if (act === 'h-cal-prev' || act === 'h-cal-next') {
