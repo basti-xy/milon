@@ -125,9 +125,35 @@ function valueItemHtml(item, group = {}) {
   </details>`;
 }
 
+/* ---------- Schätzung aus dem Training (health/daily.json → load.estimates, täglich von der Action) ----------
+   Nur Info unter dem gültigen Wert – eingetragen wird in values.json erst nach der Regel (zwei Methoden, zwei Wochen ≥ 3 %).
+   Tipp öffnet den Verlauf auf der Belastungs-Seite. */
+const EST_ITEMS = { ftp: 'ftp', 'lauf-schwelle-pace': 'run_pace', css: 'css' };
+function estimateHtml(item) {
+  const key = EST_ITEMS[item.id];
+  const est = key && typeof healthData === 'function' ? healthData()?.load?.estimates : null;
+  if (!est) return '';
+  let txt = '';
+  if (key === 'css') {
+    const v = [est.css, est.css_sessions].filter(Boolean).sort((x, y) => valueToNumber(item, x) - valueToNumber(item, y));
+    if (!v.length) return '';
+    txt = `${v[0]}${v.length > 1 && v[1] !== v[0] ? `–${v[1]}` : ''} (vorläufig)`;
+  } else {
+    const e = est[key];
+    if (!e?.value) return '';
+    const unit = item.kind === 'number' && item.unit ? ` ${item.unit}` : '';   // W ja, min/km nicht (steht beim Wert darüber)
+    txt = `${e.value}${unit}${e.low && e.high ? ` (${e.low}–${e.high})` : ''}`;
+  }
+  const prop = est.proposal?.[key];
+  const stand = est.date ? `Stand ${fmtStand(est.date).slice(0, 6)}` : '';
+  return `<a class="val-est" href="#/belastung">
+    <span>Schätzung aus dem Training: ${esc(txt)}${stand ? ` · <span class="nw">${esc(stand)}</span>` : ''}${prop ? `<br><b>Vorschlag: neuer Wert ${esc(String(prop.value))}${esc(item.kind === 'number' && item.unit ? ` ${item.unit}` : '')}</b>` : ''}</span>
+    <span aria-hidden="true">›</span></a>`;
+}
+
 const groupHtml = (g) => `<section class="card values-group">
   <div class="today-label">${esc(g.name)}</div>
-  ${(g.items || []).map((it) => valueItemHtml(it, g)).join('')}
+  ${(g.items || []).map((it) => valueItemHtml(it, g) + estimateHtml(it)).join('')}
 </section>`;
 
 function renderWerte() {

@@ -782,6 +782,11 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .val-row:not([data-single]) > summary { cursor: pointer; }
 .val-main { flex: 1; min-width: 0; }
 .val-name { font-family: var(--serif); font-size: 17px; line-height: 1.2; }
+.val-est { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px 0 0; padding: 0 0 10px;
+  font-size: 12.5px; line-height: 1.35; color: var(--text-2); text-decoration: none; min-height: 32px; }
+.val-est b { color: var(--ink); font-weight: 600; }
+.val-est .nw { white-space: nowrap; }
+.val-est > span:last-child { color: var(--text-3); font-size: 18px; }
 .val-spark { flex: none; color: var(--ink); }
 .val-value { flex: none; text-align: right; white-space: nowrap; }
 .val-delta { font-family: var(--mono); font-size: .78rem; color: var(--good); }

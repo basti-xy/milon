@@ -31,7 +31,7 @@ async function loadHealth() {
       if (JSON.stringify(r.data) !== JSON.stringify(store.get(key, null))) { store.set(key, r.data); changed = true; }
     } catch { /* offline oder Datei fehlt – letzter Stand bleibt */ }
   }
-  if (changed && ['home', 'koerper', 'training', 'belastung'].includes(currentRoute().name)) rerenderCurrent();
+  if (changed && ['home', 'koerper', 'training', 'belastung', 'werte'].includes(currentRoute().name)) rerenderCurrent();
 }
 
 /* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
