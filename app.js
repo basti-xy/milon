@@ -1068,7 +1068,7 @@ function rerenderCurrent() {
   if (run || modalOpen() || !DATA) return;
   const { name: n, arg } = currentRoute();
   // Unterseiten mit Eingaben (Gym erfassen) nicht neu zeichnen, sonst gingen Eingaben verloren
-  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper') route({ keepScroll: true });
+  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper' || n === 'belastung') route({ keepScroll: true });
 }
 
 function route({ keepScroll = false } = {}) {
@@ -1120,6 +1120,9 @@ function route({ keepScroll = false } = {}) {
       return;
     case 'koerper':
       renderKoerper(r.arg); // heute.js
+      return;
+    case 'belastung':
+      renderBelastung(); // belastung.js
       return;
     case 'werte':
       renderWerte();
@@ -1455,6 +1458,7 @@ function trainingHtml() {
       <div class="tw-bars" role="img" aria-label="Trainingsstunden der letzten ${bars.length} Wochen">${barsHtml}</div>
     </div>
     ${w.headline ? `<p class="tw-headline">${esc(w.headline)}</p>` : ''}
+    ${w.load_note ? `<p class="tw-load"><span class="k">Belastung</span>${esc(w.load_note)} <a class="link" href="#/belastung">Verlauf</a></p>` : ''}
     ${insights ? `<ul class="tw-list">${insights}</ul>` : ''}
     ${sports ? `<div class="tw-sports">${sports}</div>` : ''}
     ${gym?.sessions.length ? `<p class="tw-gymlist small muted">Gym: ${gym.sessions.map((s) => esc(`${fmtDate(s.date)} ${s.splitName}`)).join(' · ')}</p>` : ''}

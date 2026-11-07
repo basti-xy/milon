@@ -813,6 +813,7 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
   .h-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
   .h-grid > .span-2 { grid-column: span 2; }
   .h-grid > .h-metrics-head, .h-grid > .h-warns { grid-column: span 4; }
+  .h-grid > .h-races, .h-grid > #h-cal { grid-column: span 2; } /* mit der Kachel Belastung: Belastung + Woche, darunter Wettkämpfe + Kalender */
   .h-metrics { grid-column: span 4; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
   .h-metrics-head { margin-bottom: -6px; }
   .h-date { font-size: 34px; }
@@ -824,3 +825,72 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
   .h-race-name { font-size: 17px; }
   .h-row { padding: 9px 16px; }
 }
+
+/* ---------- Belastung: Fitness · Ermüdung · Form (belastung.js) ---------- */
+.ld-tile { padding: 14px; display: flex; flex-direction: column; gap: 10px; color: inherit; }
+.ld-tile:active { background: var(--fill); }
+.ld-nums, .ld-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ld-nums > div, .ld-today > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ld-nums .k, .ld-today .k { display: inline-flex; align-items: center; gap: 6px; }
+.ld-nums > div { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: center; }
+.ld-nums > div > strong, .ld-nums > div > small { grid-column: 1 / -1; }
+.ld-nums strong, .ld-today strong { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1.05; font-variant-numeric: lining-nums tabular-nums; }
+.ld-nums small, .ld-today small { font-family: var(--mono); font-size: 11.5px; color: var(--text-2); }
+.ld-nums small.ok, .ld-today small.ok { color: var(--good); }
+.ld-nums small.bad, .ld-today small.bad { color: var(--bad); }
+.ld-key { width: 18px; height: 6px; flex: none; overflow: visible; }
+.ld-key line { stroke-linecap: round; }
+.ld-key.ld-ctl line { stroke: var(--ink); stroke-width: 2.4; }
+.ld-key.ld-atl line { stroke: var(--text-3); stroke-width: 1.6; stroke-dasharray: 3 2.5; }
+.ld-key.ld-tsb line { stroke: var(--sport-swim); stroke-width: 1.4; }
+.ld-key.ld-pv line { stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 2 2; }
+.ld-key.ld-cmp line { stroke: var(--text-3); stroke-width: 1; }
+.ld-chart { display: block; width: 100%; height: 120px; overflow: visible; }
+.ld-chart.is-big { height: 200px; }
+.ld-detail .ld-axis { padding-left: 26px; }
+.ld-tile .ld-chart { height: 110px; }
+.ld-line { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.ld-line.l-ctl { stroke: var(--ink); stroke-width: 2.2; }
+.ld-line.l-atl { stroke: var(--text-3); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.ld-line.l-tsb { stroke: var(--sport-swim); stroke-width: 1.2; }
+.ld-line.l-cmp { stroke: var(--text-3); stroke-width: 1; opacity: .8; }
+.ld-line.l-pv { stroke-dasharray: 2 3; stroke-width: 1.6; }
+.ld-dot { stroke-width: 6; stroke-linecap: round; }
+.ld-dot.l-ctl { stroke: var(--ink); }
+.ld-dot.l-tsb { stroke: var(--sport-swim); }
+.ld-zero { stroke: var(--text-2); stroke-width: 1; }
+.ld-grid { stroke: var(--hair); stroke-width: 1; }
+.ld-plot { position: relative; padding-left: 26px; }
+.ld-y { position: absolute; left: 0; top: 0; bottom: 0; width: 22px; pointer-events: none; }
+.ld-y span { position: absolute; right: 0; transform: translateY(-50%); font-family: var(--mono); font-size: 9.5px; color: var(--text-2); line-height: 1; }
+.ld-fresh { fill: var(--good); opacity: .12; }
+.ld-zone { opacity: .1; fill: transparent; }
+.ld-zone.z-frisch { fill: var(--good); }
+.ld-zone.z-sehr_hoch { fill: var(--bad); }
+.ld-bar { fill: var(--bar); }
+.ld-bar.is-good { fill: var(--good); opacity: .7; }
+.ld-bar.is-bad { fill: var(--bad); opacity: .75; }
+.ld-foot { font-size: 11.5px; color: var(--text-2); }
+.ld-tabs { margin: 2px 0 12px; }
+.ld-today { margin-bottom: 12px; }
+.ld-ctrl { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ld-ctrl .seg button { padding: 0 11px; }
+.ld-detail { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ld-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--text-2); }
+.ld-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ld-sub { margin-top: 8px; }
+.ld-axis { display: flex; justify-content: space-between; }
+.ld-note { margin: 10px 2px 0; }
+.ld-thr { padding: 12px 14px; margin-top: 12px; }
+.ld-thr li span:last-child { text-align: right; }
+.ld-thr small { font-family: var(--sans); font-size: 11px; margin-left: 4px; }
+.ld-info p { margin: 0 0 12px; line-height: 1.5; }
+.ld-quote { font-family: var(--serif); font-size: 1.1rem; font-style: italic; color: var(--text-2); }
+.ld-table { overflow-x: auto; margin: 0 0 14px; }
+.ld-table table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.ld-table th, .ld-table td { text-align: left; vertical-align: top; padding: 8px 8px 8px 0; border-top: 1px solid var(--hair); }
+.ld-table thead th { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-2); border-top: 0; }
+.ld-table tbody th { font-weight: 600; white-space: nowrap; }
+.tw-load { margin: 8px 0; font-size: .93rem; line-height: 1.45; }
+.tw-load .k { display: block; margin-bottom: 2px; }
+

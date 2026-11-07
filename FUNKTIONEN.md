@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v31 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v32 (schwarzes Layout beim Erfassen, Wiederholungsziele, Sport-Symbole).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -42,6 +42,9 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v31 (sc
 - [x] ✓ Wochen-Routine als eigener Punkt in Wochenleiste und Kalender (erledigt; Ring am festen Wochentag, solange in der Woche offen)
 - [x] ✓ Diese Woche: Stunden, Sportarten, Wochenleiste (gefüllt = erledigt, Ring = offen), 12 Wochen (iPad)
 - [x] ✓ Wettkämpfe: nächste 2 + Saisonziel, Tage bis dahin
+- [x] ✓ Kachel Belastung: Fitness (mit Anstieg 7 Tage), Ermüdung, Form (Zone), ein Diagramm 12 Wochen mit drei Linien, Band „frisch“, Hinweis bei hohem Puls-Anteil
+- [x] ✓ Detailseite #/belastung: Verlauf (2 Wochen / 1 Monat / 6 Monate / Saison, Gesamt · Rad · Laufen · Schwimmen, Form als Balken mit Zonen, Vorschau gestrichelt, Vergleichsrennen grau, genutzte Schwellen + Schätzung) und Info
+- [x] ✓ Auswertung: Text zur Belastung (`load_note`) mit Link zum Verlauf
 - [x] ✓ Ohne Tagesdaten: Hinweis statt Fehler
 
 ## Werte
