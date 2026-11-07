@@ -34,6 +34,81 @@ async function loadHealth() {
   if (changed && ['home', 'koerper', 'training'].includes(currentRoute().name)) rerenderCurrent();
 }
 
+/* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
+   Holt dort neue Garmin-Daten und den Trainingsplan-Kalender und baut health/daily.json neu – also mehr als ein Abgleich.
+   Braucht im Token zusätzlich „Actions: Read and write“. Ablauf: workflow_dispatch → Lauf beobachten → Tagesdaten neu laden. */
+const HEALTH_WORKFLOW = 'taeglich.yml';
+const refresh = { status: 'idle', message: '', url: '', startedAt: 0 };
+function refreshStatusHtml() {
+  const icon = { running: '…', done: '✓', error: '!' }[refresh.status] || '';
+  if (refresh.status === 'idle') return '';
+  return `<p class="small ${refresh.status === 'error' ? 'warn' : refresh.status === 'done' ? 'ok' : 'muted'}" id="refresh-msg">${icon} ${esc(refresh.message)}${refresh.url ? ` <a href="${esc(refresh.url)}" target="_blank" rel="noopener">Auf GitHub ansehen</a>` : ''}</p>`;
+}
+function setRefresh(status, message, url = refresh.url) {
+  Object.assign(refresh, { status, message, url });
+  const box = document.getElementById('refresh-status');
+  if (box) box.innerHTML = refreshStatusHtml();
+  const btn = document.querySelector('[data-act="h-refresh"]');
+  if (btn) btn.disabled = status === 'running';
+}
+async function refreshHealthNow() {
+  const c = GHSync.getConfig();
+  if (!c || refresh.status === 'running') return;
+  if (navigator.onLine === false) { setRefresh('error', 'Offline – ohne Internet kann der Abruf nicht starten.', ''); return; }
+  const startedAt = Date.now();
+  refresh.startedAt = startedAt;
+  setRefresh('running', 'Abruf wird auf GitHub gestartet …', '');
+  try {
+    await GHSync.repoApi(c, 'POST', `/actions/workflows/${HEALTH_WORKFLOW}/dispatches`, { ref: c.branch || 'main', inputs: { days: '3' } });
+  } catch (e) {
+    const noRight = e.status === 403 || e.status === 404;
+    setRefresh('error', noRight
+      ? 'Dem Token fehlt die Berechtigung „Actions: Read and write“ für das Daten-Repository. Auf GitHub beim Token ergänzen, dann erneut versuchen.'
+      : (e.message || 'Start fehlgeschlagen.'), '');
+    return;
+  }
+  setRefresh('running', 'Garmin-Daten und Trainingsplan werden abgerufen … (ca. 1 Minute)');
+  const deadline = startedAt + 5 * 60 * 1000;
+  while (Date.now() < deadline && refresh.startedAt === startedAt) {
+    await new Promise((r) => setTimeout(r, 6000));
+    let wf = null;
+    try {
+      const r = await GHSync.repoApi(c, 'GET', `/actions/workflows/${HEALTH_WORKFLOW}/runs?event=workflow_dispatch&per_page=5`);
+      wf = (r?.workflow_runs || []).find((x) => Date.parse(x.created_at) >= startedAt - 60000) || null;
+    } catch { continue; } // kurz kein Netz – weiter warten
+    if (!wf) continue;
+    if (wf.status !== 'completed') { setRefresh('running', wf.status === 'queued' ? 'Wartet auf GitHub …' : 'Garmin-Daten und Trainingsplan werden abgerufen …', wf.html_url); continue; }
+    if (wf.conclusion === 'success') {
+      await loadHealth();
+      const d = healthData();
+      const t = d?.updated ? new Date(d.updated).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+      setRefresh('done', `Fertig – Tagesdaten${t ? ` von ${t} Uhr` : ''} geladen.`, '');
+    } else {
+      await loadHealth(); // Kalender oder Teilergebnisse können trotzdem neu sein
+      setRefresh('error', 'Der Abruf ist fehlgeschlagen (meist Garmin: Schlüssel abgelaufen oder Dienst nicht erreichbar).', wf.html_url);
+    }
+    return;
+  }
+  if (refresh.startedAt === startedAt) setRefresh('error', 'Keine Rückmeldung von GitHub – später unter „Jetzt abgleichen“ erneut laden.', refresh.url);
+}
+
+/** Karte in den Einstellungen. */
+function refreshCardHtml() {
+  if (!GHSync.getConfig()) return '';
+  const d = healthData();
+  const t = d?.updated ? new Date(d.updated).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'noch keine';
+  return `<section class="card">
+    <h2 class="card-title">Tagesdaten abrufen</h2>
+    <p class="small muted">Startet auf GitHub den Abruf <strong>neuer Garmin-Daten</strong> (Schlaf, HRV, Ruhepuls, Aktivitäten) und des
+      <strong>Trainingsplan-Kalenders</strong> und baut daraus die Tagesdaten für „Heute“ neu. Das ist mehr als „Jetzt abgleichen“,
+      das nur die Dateien zwischen Gerät und GitHub austauscht. Läuft sonst automatisch jeden Morgen; dauert etwa 1 Minute.</p>
+    <ul class="status-list small"><li><span class="muted">Tagesdaten</span><strong>${esc(t)}</strong></li></ul>
+    <div id="refresh-status">${refreshStatusHtml()}</div>
+    <div class="btn-row"><button class="btn btn-secondary" data-act="h-refresh" ${refresh.status === 'running' ? 'disabled' : ''}>Garmin & Plan jetzt abrufen</button></div>
+    <p class="small muted">Braucht im Token zusätzlich die Berechtigung „Actions: Read and write“.</p>
+  </section>`;
+}
+
 /* ---------- Formatierung ---------- */
 const fmtHM = (h) => { if (h == null) return '–'; const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${pad2(Math.abs(m % 60))}`; };
 const fmtInt = (n) => (n == null ? '–' : Math.round(n).toLocaleString('de-DE'));
@@ -534,6 +609,7 @@ function renderTraining() {
 
 /* ---------- Aktionen (data-act="h-…") ---------- */
 function handleHeuteAction(act, el) {
+  if (act === 'h-refresh') { refreshHealthNow(); return; }
   if (act === 'h-kd-range') { kdDays = Number(el.dataset.days) || 30; renderKoerper(currentRoute().arg); return; }
   if (act === 'h-cal-prev' || act === 'h-cal-next') {
     gcalOffset = Math.max(0, gcalOffset + (act === 'h-cal-prev' ? 1 : -1));

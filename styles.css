@@ -63,7 +63,7 @@
   font-family: var(--sans);
 }
 
-/* Schwarzes Layout beim Erfassen (Dehn-Player, Gym erfassen, Abschluss) – body.is-dark, siehe applyTheme() in app.js.
+/* Dunkles Layout – body.is-dark, siehe applyTheme() in app.js (Erfassen: captureDark, übrige App: appTheme).
    Echtes Schwarz (OLED), helle Tinte, Sportfarben aufgehellt (Kontrast ≥ 4,5 : 1 auf --tile). */
 body.is-dark {
   color-scheme: dark;
@@ -95,6 +95,9 @@ body.is-dark {
   --flame: #dfb75e;
 }
 body.is-dark::before { display: none; }
+body.is-dark .tabbar { background: var(--fill); border: 1px solid var(--line); }
+body.is-dark .tab { color: var(--text-2); }
+body.is-dark .tab.is-active { background: var(--ink); color: var(--paper); }
 body.is-dark .modal-backdrop { background: rgb(0 0 0 / .6); }
 
 * { box-sizing: border-box; }

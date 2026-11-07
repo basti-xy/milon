@@ -48,6 +48,7 @@ const APP_DEFAULTS = {
   muted: false, // Ton-Schalter im Player: aus = gar kein Ton (Video im Bild-in-Bild läuft weiter)
   gymDays: [1, 3, 5], // Gym-Tage für offene Ringe in Woche und Kalender (getDay(): 1 = Mo, 3 = Mi, 5 = Fr)
   captureDark: false, // schwarzes Layout beim Erfassen (Dehn-Player, Gym erfassen, Abschluss-Seiten)
+  appTheme: 'light',  // übrige App: light | dark | auto (wie iPhone/iPad) – unabhängig von captureDark
 };
 
 /* ---------- Speicher (localStorage, immer mit try/catch) ---------- */
@@ -1129,12 +1130,17 @@ function route({ keepScroll = false } = {}) {
 }
 function redirect(hash) { history.replaceState(null, '', hash); route(); }
 
-/* ---------- Schwarzes Layout beim Erfassen ----------
-   Gilt nur für Dehn-Player, Gym erfassen/bearbeiten und die Abschluss-Seiten; der Rest bleibt hell.
-   Schalter (Mond/Sonne) im Player und auf der Erfassen-Seite, gespeichert in den Einstellungen (captureDark). */
+/* ---------- Hell / Dunkel ----------
+   Zwei unabhängige Einstellungen:
+   - captureDark: Erfassen (Dehn-Player, Gym erfassen/bearbeiten, Abschluss-Seiten) – Mond/Sonne-Knopf dort und in den Einstellungen.
+   - appTheme: alle übrigen Seiten – hell, dunkel oder automatisch wie das Gerät (nur in den Einstellungen).
+   So kann die App hell bleiben und nur das Erfassen schwarz sein (oder umgekehrt). */
 const isCaptureRoute = (r) => r.name === 'run' || r.name === 'done' || (r.name === 'gym' && ['log', 'edit', 'fertig'].includes(r.arg));
+const systemDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const appIsDark = () => cfg.appTheme === 'dark' || (cfg.appTheme === 'auto' && !!systemDark?.matches);
 function applyTheme(r = currentRoute()) {
-  const dark = !!cfg.captureDark && (isCaptureRoute(r) || !!(run && !run.finished));
+  const capture = isCaptureRoute(r) || !!(run && !run.finished);
+  const dark = capture ? !!cfg.captureDark : appIsDark();
   document.body.classList.toggle('is-dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : '';
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -1144,6 +1150,7 @@ function themeBtnHtml(cls = 'icon-btn') {
   const dark = !!cfg.captureDark;
   return `<button class="${cls} theme-btn" data-act="theme-dark" aria-pressed="${dark}" aria-label="${dark ? 'Helles Layout' : 'Schwarzes Layout'}" title="${dark ? 'Helles Layout' : 'Schwarzes Layout'}">${dark ? ICONS.sun : ICONS.moon}</button>`;
 }
+systemDark?.addEventListener?.('change', () => applyTheme());
 function toggleCaptureDark() {
   saveSetting('captureDark', !cfg.captureDark);
   applyTheme();
@@ -1761,10 +1768,19 @@ function renderSettings() {
         <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist</div></div>
         <div class="day-chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-act="set-gymday" data-day="${d}" class="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d) ? 'is-on' : ''}" aria-pressed="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d)}">${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d]}</button>`).join('')}</div>
       </div>
+      <div class="set-row is-wrap">
+        <div class="set-text"><div class="set-label">Darstellung der App</div><div class="set-hint">Heute, Training, Werte, Einstellungen. Automatisch = wie iPhone/iPad</div></div>
+        <div class="seg" role="group" aria-label="Darstellung der App">${[['light', 'Hell'], ['dark', 'Dunkel'], ['auto', 'Automatisch']].map(([v, l]) => `<button data-act="set-apptheme" data-v="${v}" class="${(cfg.appTheme || 'light') === v ? 'is-on' : ''}" aria-pressed="${(cfg.appTheme || 'light') === v}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="set-row is-wrap">
+        <div class="set-text"><div class="set-label">Beim Erfassen</div><div class="set-hint">Dehn-Player und Gym erfassen – unabhängig von der App, auch über den Mond-Knopf dort</div></div>
+        <div class="seg" role="group" aria-label="Darstellung beim Erfassen">${[[false, 'Hell'], [true, 'Schwarz']].map(([v, l]) => `<button data-act="set-capturedark" data-v="${v}" class="${!!cfg.captureDark === v ? 'is-on' : ''}" aria-pressed="${!!cfg.captureDark === v}">${l}</button>`).join('')}</div>
+      </div>
       <div class="set-foot"><button class="btn btn-ghost btn-sm" data-act="reset-settings">Auf Standard zurücksetzen</button></div>
     </section>
 
     ${syncSectionHtml()}
+    ${refreshCardHtml()}
 
     <section class="card">
       <h2 class="card-title">Datensicherung</h2>
@@ -1934,6 +1950,8 @@ app.addEventListener('click', async (e) => {
   if (act === 'tw-next') { stepTrainingWeek(-1); return; }
   if (act === 'tw-week') { trainingIdx = Number(el.dataset.i) || 0; redrawTrainingCard(); return; }
   if (act === 'theme-dark') { toggleCaptureDark(); return; }
+  if (act === 'set-apptheme') { saveSetting('appTheme', el.dataset.v); applyTheme(); renderSettings(); return; }
+  if (act === 'set-capturedark') { saveSetting('captureDark', el.dataset.v === 'true'); applyTheme(); renderSettings(); return; }
   switch (act) {
     case 'start': startRun(el.dataset.id); break;
     case 'toggle': togglePause(); el.blur(); break;
@@ -1956,7 +1974,7 @@ app.addEventListener('click', async (e) => {
       say(st ? announceParts(st) : ['Geschafft'], true);
       break;
     }
-    case 'reset-settings': store.remove(KEYS.settings); refreshCfg(); renderSettings(); break;
+    case 'reset-settings': store.remove(KEYS.settings); refreshCfg(); applyTheme(); renderSettings(); break;
     case 'mute': {
       saveSetting('muted', !cfg.muted);
       if (cfg.muted) {
