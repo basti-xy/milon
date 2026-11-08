@@ -388,9 +388,11 @@ async function runSync() {
     if (snapshotKey(merged) !== snapshotKey(res.data)) sync.again = true;
     // Gym-Protokoll (gym.js) – gleiches Muster, eigene Datei
     const gymChanged = typeof syncGymLog === 'function' ? await syncGymLog() : false;
+    let sharedChanged = false;
+    try { sharedChanged = await syncSharedSettings(); } catch { /* Gym-Tage beim nächsten Abgleich */ }
     saveMeta({ lastSyncAt: new Date().toISOString() });
     setSyncStatus('ok', '');
-    if (snapshotKey(merged) !== before || gymChanged) refreshAfterSync();
+    if (snapshotKey(merged) !== before || gymChanged || sharedChanged) refreshAfterSync();
   } catch (e) {
     const code = e?.code || 'other';
     setSyncStatus(code === 'network' ? 'offline' : 'error', e?.message || 'Unbekannter Fehler beim Abgleich.');
@@ -399,6 +401,28 @@ async function runSync() {
     if (sync.again) { sync.again = false; scheduleSync(1000); }
   }
 }
+/* ---------- Gemeinsame Einstellungen (milon-settings.json im Daten-Repository) ----------
+   Gym-Tage gehören zum Training, nicht zum Gerät (Wunsch des Nutzers) → für alle Geräte gleich, auch für die
+   Mitteilungen (push_send.py liest dieselbe Datei). Neueste Änderung gewinnt (gymDaysUpdatedAt). Ein Gerät ohne eigene
+   Änderung (leerer Zeitstempel) übernimmt den Stand der Datei; gibt es die Datei noch nicht, legt das erste Gerät sie an.
+   Alle übrigen Einstellungen bleiben pro Gerät. */
+const SHARED_SETTINGS_PATH = 'milon-settings.json';
+const sharedLocal = () => ({ app: 'milon-settings', version: 1,
+  gymDays: Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays, gymDaysUpdatedAt: cfg.gymDaysUpdatedAt || '' });
+function mergeShared(local, remote) {
+  if (!remote || !Array.isArray(remote.gymDays)) return local;
+  return String(local.gymDaysUpdatedAt || '') > String(remote.gymDaysUpdatedAt || '') ? { ...remote, ...local } : { ...local, ...remote };
+}
+const sameShared = (a, b) => JSON.stringify([a?.gymDays, a?.gymDaysUpdatedAt || '']) === JSON.stringify([b?.gymDays, b?.gymDaysUpdatedAt || '']);
+async function syncSharedSettings() {
+  const res = await GHSync.syncFile(SHARED_SETTINGS_PATH, { local: sharedLocal(), merge: mergeShared, equals: sameShared, message: 'Milon: Gym-Tage' });
+  const d = mergeShared(sharedLocal(), res.data);   // falls während des Abgleichs lokal geändert wurde
+  if (sameShared(d, sharedLocal())) return false;
+  saveSetting('gymDays', d.gymDays);
+  saveSetting('gymDaysUpdatedAt', d.gymDaysUpdatedAt || '');
+  return true;
+}
+
 function setSyncStatus(status, message) {
   sync.status = status;
   sync.message = message;
@@ -1770,7 +1794,7 @@ function renderSettings() {
       ${toggleHtml('voice', 'Sprachansage', esc(voiceStatusText()), '<button class="btn btn-ghost btn-sm" data-act="test-voice">Test</button>')}
       ${toggleHtml('autoAdvanceRepExercises', 'Auto-Weiter bei Wiederholungen', 'Aus: Nach der geschätzten Zeit wartet die App auf „Fertig“')}
       <div class="set-row is-wrap">
-        <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist</div></div>
+        <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist. Gilt für alle Geräte${GHSync.getConfig() ? '' : ' (nach dem Verbinden)'}</div></div>
         <div class="day-chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-act="set-gymday" data-day="${d}" class="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d) ? 'is-on' : ''}" aria-pressed="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d)}">${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d]}</button>`).join('')}</div>
       </div>
       <div class="set-row is-wrap">
@@ -1950,7 +1974,9 @@ app.addEventListener('click', async (e) => {
     const cur = new Set(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays);
     if (cur.has(day)) cur.delete(day); else cur.add(day);
     saveSetting('gymDays', [...cur].sort((x, y) => x - y));
-    pushGymDaysChanged(); // Abo für die Mitteilungen mitziehen (push.js)
+    saveSetting('gymDaysUpdatedAt', new Date().toISOString()); // gilt für alle Geräte (milon-settings.json)
+    scheduleSync(1500);
+    pushGymDaysChanged(); // Abo für die Mitteilungen mitziehen (push.js, Rückfall)
     renderSettings();
     return;
   }

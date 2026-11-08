@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v34 (Push-Mitteilungen, Zahl am App-Icon).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gym-Tage für alle Geräte).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -55,7 +55,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v34 (Pu
 - [x] ◐ Mitteilungen (v34): erlauben/abmelden, Test-Mitteilung (startet die Action), Karte ohne Sync bzw. außerhalb der Home-Bildschirm-App mit Hinweis – Empfang und Zahl am Icon nur am Gerät prüfbar
 - [x] ✓ Zahl am App-Icon = offene Gym- und Dehn-Einheiten (gleiche Zählung wie die Action, geprüft 02.–11.11.)
 - [x] ✓ Übergangszeiten, Töne, Sprachansage, Testknöpfe, Auto-Weiter, Zurücksetzen
-- [x] ✓ Gym-Tage (neu, Standard Mo/Mi/Fr)
+- [x] ◐ Gym-Tage (Standard Mo/Mi/Fr), seit v35 für alle Geräte über `milon-settings.json` (neueste Änderung gewinnt) – am zweiten Gerät prüfen
 - [x] ✓ Darstellung der App: Hell / Dunkel / Automatisch – unabhängig von „Beim Erfassen: Hell / Schwarz“
 - [x] ◐ „Garmin & Plan jetzt abrufen“: startet den Workflow Tagesdaten, zeigt Fortschritt, lädt danach neu; Hinweis bei fehlender Token-Berechtigung (mit echter GitHub-Antwort am Gerät prüfen)
 - [x] ◐ Einheit nachtragen, Verlauf mit Löschen

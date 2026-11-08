@@ -47,7 +47,8 @@ Vorlage: `app-daten/milon-design/D-iPhone.html` und `D-iPad.html` (privat, enth�
 `heute.js` (Heute, Auswertung, Körper-Details, Training, „Garmin & Plan jetzt abrufen“ per `workflow_dispatch` des Workflows `taeglich.yml` – Token braucht dafür Actions: Read and write) · `gym.js` (Gym) · `push.js` (Mitteilungen + Zahl am App-Icon: zählt offene Gym- und Dehn-Einheiten wie `todoHtml`, ohne Plan – Wunsch des Nutzers; Abo je Gerät in `push/abos.json`, Versand durch die Action „Tagesdaten“ mit `training/push_send.py`, dort dieselbe Zählung in Python → bei Änderungen an Streak/Gym-Regeln beide anpassen. Öffentlicher VAPID-Schlüssel steht im Code, der private nur als Secret) · `werte.js` (Werte; unter FTP/Schwellentempo/CSS die Schätzung aus `daily.json → load.estimates`, nur Info – gültig bleibt `values.json`) · `sync.js` (GHSync) ·
 `audio-test/` (Testseite für Audio auf dem iPad). Funktionsliste zum Abhaken bei Umbauten: `FUNKTIONEN.md`.
 Sync-Muster: `GHSync.syncFile(path, { local, merge, equals })` + Löschmarkierungen; Merge pro Eintrag nach `id`
-(Gym: neueste `updatedAt` gewinnt). Unterseiten mit Eingaben nicht durch `rerenderCurrent()` neu zeichnen.
+(Gym: neueste `updatedAt` gewinnt). Gemeinsame Einstellungen aller Geräte (bisher nur Gym-Tage) in `milon-settings.json`
+(`syncSharedSettings` in `app.js`, neueste `gymDaysUpdatedAt` gewinnt); alle übrigen Einstellungen bleiben pro Gerät. Unterseiten mit Eingaben nicht durch `rerenderCurrent()` neu zeichnen.
 
 ## Ton auf iPhone/iPad – Erfahrungen (wichtig!)
 Ziel war: Ansagen hörbar **und** ein Video aus einer anderen App im Bild-in-Bild läuft weiter, auch im Stummmodus.
