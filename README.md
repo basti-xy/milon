@@ -45,8 +45,9 @@ Sportarten als Punkte mit Symbol (gefüllt = erledigt, Ring = offen). Beim Erfas
 | `heute.js` | Heute, Auswertung, Körper-Details, Training (Kalender, Streaks) – liest `health/daily.json` und `health/history.json` |
 | `gym.js` | Gym: Pläne, Protokoll mit Sync, Erfassen, Progression, Gym-Streak |
 | `werte.js` | Werte |
+| `push.js` | Push-Mitteilungen (Anmeldung in `push/abos.json` des Daten-Repos) und Zahl am App-Icon (offene Gym- und Dehn-Einheiten) |
 | `sync.js` | `GHSync`: Lesen/Schreiben einer Datei im Daten-Repository mit Konflikt-Wiederholung |
-| `sw.js` | Service Worker (Network-first, offline aus dem Cache) |
+| `sw.js` | Service Worker (Network-first, offline aus dem Cache; zeigt Push-Mitteilungen und setzt die Zahl am Icon) |
 | `fonts/` | Schriften (woff2, lateinisch) |
 
 Nach jeder Änderung die Versionen hochzählen: `?v=…` in `index.html` und `CACHE` in `sw.js`.

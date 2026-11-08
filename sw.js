@@ -1,6 +1,6 @@
 // Service Worker: Network-first, damit Updates sofort ankommen – offline wird aus dem Cache geliefert.
 // Die Routinen liegen nicht hier, sondern privat bei GitHub (die App speichert sie selbst zwischen).
-const CACHE = 'milon-v33';
+const CACHE = 'milon-v34';
 const ASSETS = [
   './',
   'index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   'werte.js',
   'heute.js',
   'belastung.js',
+  'push.js',
   'fonts/newsreader-latin-400-normal.woff2',
   'fonts/newsreader-latin-500-normal.woff2',
   'fonts/newsreader-latin-400-italic.woff2',
@@ -37,6 +38,31 @@ self.addEventListener('activate', (event) => {
       .then((keys) => Promise.all(keys.filter((k) => /^(dehnapp|milon)-v\d+$/.test(k) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// Push-Mitteilung aus der GitHub Action („Heute steht an“): anzeigen und die Zahl am App-Icon setzen.
+// iOS verlangt, dass jede Push-Nachricht sichtbar angezeigt wird – sonst wird das Abo entzogen.
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch { d = { body: event.data ? event.data.text() : '' }; }
+  const n = Number(d.badge) || 0;
+  const badge = 'setAppBadge' in self.navigator
+    ? (n ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge()).catch(() => {})
+    : Promise.resolve();
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(d.title || 'Milon', {
+      body: d.body || '', tag: d.tag || 'milon', icon: 'icons/icon-192.png', data: { url: d.url || './' },
+    }),
+    badge,
+  ]));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || './', self.registration.scope).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const win = list.find((c) => c.url.startsWith(self.registration.scope));
+    return win ? win.focus().then((c) => (c && 'navigate' in c ? c.navigate(url) : c)) : self.clients.openWindow(url);
+  }));
 });
 
 self.addEventListener('fetch', (event) => {
