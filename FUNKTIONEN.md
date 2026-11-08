@@ -1,6 +1,6 @@
 # Milon – Funktionsliste
 
-Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v33 (Schätzung der Schwellen unter Werte).
+Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v34 (Push-Mitteilungen, Zahl am App-Icon).
 ✓ = im Browser angesehen bzw. bedient (390 × 844, 820 × 1180, 1376 × 1032) · ◐ = Logik unverändert übernommen, nur neu gestaltet – am Gerät prüfen.
 
 ## Dehnen
@@ -52,6 +52,8 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v33 (Sc
 - [x] ✓ Unter FTP, Schwellentempo und CSS grau die Schätzung aus dem Training (Spanne, Stand, ggf. Vorschlag), Tipp öffnet Belastung (v33)
 
 ## Einstellungen & Daten
+- [x] ◐ Mitteilungen (v34): erlauben/abmelden, Test-Mitteilung (startet die Action), Karte ohne Sync bzw. außerhalb der Home-Bildschirm-App mit Hinweis – Empfang und Zahl am Icon nur am Gerät prüfbar
+- [x] ✓ Zahl am App-Icon = offene Gym- und Dehn-Einheiten (gleiche Zählung wie die Action, geprüft 02.–11.11.)
 - [x] ✓ Übergangszeiten, Töne, Sprachansage, Testknöpfe, Auto-Weiter, Zurücksetzen
 - [x] ✓ Gym-Tage (neu, Standard Mo/Mi/Fr)
 - [x] ✓ Darstellung der App: Hell / Dunkel / Automatisch – unabhängig von „Beim Erfassen: Hell / Schwarz“

@@ -282,7 +282,7 @@ function getHistory() {
   const h = store.get(KEYS.history, []);
   return Array.isArray(h) ? h.filter((e) => e && e.routineId && /^\d{4}-\d{2}-\d{2}$/.test(e.date)) : [];
 }
-function setHistory(h) { return store.set(KEYS.history, h); }
+function setHistory(h) { const ok = store.set(KEYS.history, h); if (typeof queueBadge === 'function') queueBadge(); return ok; } // Zahl am Icon (push.js)
 function addHistory(entry) { const h = getHistory(); h.push(entry); return setHistory(h); }
 /** IDs gelöschter Einträge – damit sie beim Abgleich nicht von einem anderen Gerät zurückkommen. */
 function getDeleted() { const d = store.get(KEYS.deleted, []); return Array.isArray(d) ? d.filter((x) => typeof x === 'string') : []; }
@@ -1074,6 +1074,7 @@ function rerenderCurrent() {
 function route({ keepScroll = false } = {}) {
   const r = currentRoute();
   applyTheme(r);
+  if (typeof queueBadge === 'function') queueBadge(); // Zahl am App-Icon (push.js), z. B. nach Datumswechsel
   updateTabbar(r.name, r.arg);
   if (typeof leaveGymPage === 'function') leaveGymPage(r); // Timer der Erfassen-Seite beenden
   if (run && !run.finished) {
@@ -1785,6 +1786,7 @@ function renderSettings() {
 
     ${syncSectionHtml()}
     ${refreshCardHtml()}
+    ${pushCardHtml()}
 
     <section class="card">
       <h2 class="card-title">Datensicherung</h2>
@@ -1942,11 +1944,13 @@ app.addEventListener('click', async (e) => {
   const act = el.dataset.act;
   if (act.startsWith('gym-')) { handleGymAction(act, el); return; } // gym.js
   if (act.startsWith('h-')) { handleHeuteAction(act, el); return; } // heute.js
+  if (act.startsWith('push-')) { handlePushAction(act); return; } // push.js
   if (act === 'set-gymday') {
     const day = Number(el.dataset.day);
     const cur = new Set(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays);
     if (cur.has(day)) cur.delete(day); else cur.add(day);
     saveSetting('gymDays', [...cur].sort((x, y) => x - y));
+    pushGymDaysChanged(); // Abo für die Mitteilungen mitziehen (push.js)
     renderSettings();
     return;
   }
@@ -2158,6 +2162,7 @@ async function init() {
   loadTraining(); // Wochenübersicht (im Hintergrund)
   loadGymPlans(); // Gym-Pläne (gym.js, im Hintergrund)
   loadValues(); // Werte (werte.js, im Hintergrund)
+  checkPushSubscription(); // Push-Abo noch gültig? (push.js, im Hintergrund)
   loadHealth(); // Tagesdaten für Heute (heute.js, im Hintergrund)
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

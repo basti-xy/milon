@@ -73,7 +73,7 @@ function getGymSessions() {
   const s = store.get(GYM_KEYS.sessions, []);
   return Array.isArray(s) ? s.filter((x) => x && x.id && /^\d{4}-\d{2}-\d{2}$/.test(x.date)) : [];
 }
-const setGymSessions = (s) => store.set(GYM_KEYS.sessions, s);
+const setGymSessions = (s) => { const ok = store.set(GYM_KEYS.sessions, s); if (typeof queueBadge === 'function') queueBadge(); return ok; }; // Zahl am Icon
 function getGymDeleted() { const d = store.get(GYM_KEYS.deleted, []); return Array.isArray(d) ? d : []; }
 const gymSnapshot = () => ({ app: 'milon-gym', version: 1, sessions: getGymSessions(), deleted: getGymDeleted() });
 const sortSessions = (list) => list.sort((a, b) => a.date.localeCompare(b.date) || String(a.createdAt).localeCompare(String(b.createdAt)));
