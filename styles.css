@@ -903,3 +903,33 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .tw-load { margin: 8px 0; font-size: .93rem; line-height: 1.45; }
 .tw-load .k { display: block; margin-bottom: 2px; }
 
+
+/* ---------- Jahre & Statistik (statistik.js) ---------- */
+.st-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.st-seg::-webkit-scrollbar { display: none; }
+.st-seg button { flex: none; padding: 0 11px; }
+.st-ctrl { flex-direction: column; align-items: flex-start; }
+.st-tile { display: block; margin-bottom: 12px; color: inherit; text-decoration: none; }
+.st-bar { fill: var(--text-3); }
+.st-bar.s-swim { fill: var(--sport-swim); } .st-bar.s-bike { fill: var(--sport-bike); } .st-bar.s-run { fill: var(--sport-run); }
+.st-bar.s-strength { fill: var(--sport-strength); } .st-bar.s-stretch { fill: var(--sport-stretch); } .st-bar.s-other { fill: var(--text-3); }
+.st-bar.is-sel { opacity: .6; }
+.st-hit { fill: transparent; cursor: pointer; }
+.st-sel { margin: 6px 2px 0; color: var(--text-2); min-height: 1.4em; }
+.st-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--text-3); flex: none; }
+.st-key.s-swim { background: var(--sport-swim); } .st-key.s-bike { background: var(--sport-bike); } .st-key.s-run { background: var(--sport-run); }
+.st-key.s-strength { background: var(--sport-strength); } .st-key.s-stretch { background: var(--sport-stretch); }
+.st-key-cur { background: var(--ink); height: 3px; } .st-key-old { background: var(--text-3); height: 2px; }
+.st-cum { fill: none; stroke: var(--text-3); stroke-width: 1.2; stroke-linejoin: round; }
+.st-cum.is-cur { stroke: var(--ink); stroke-width: 2.2; }
+.st-months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; margin: 14px 0 6px; }
+.st-mo { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.st-mo-bar { position: relative; width: 100%; height: 56px; }
+.st-mo-bar i { position: absolute; left: 15%; right: 15%; display: block; border-radius: 1px; background: var(--text-3); }
+.st-mo-bar i.s-swim { background: var(--sport-swim); } .st-mo-bar i.s-bike { background: var(--sport-bike); } .st-mo-bar i.s-run { background: var(--sport-run); }
+.st-mo span { font-family: var(--mono); font-size: 10px; color: var(--text-2); }
+.st-races { list-style: none; padding: 0; margin: 6px 0 0; }
+.st-races li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--hair); }
+.st-races strong { font-weight: 600; font-size: 14px; }
+.st-pr { font-size: 12.5px; color: var(--race-text); }
+.ld-detail + .section-title, .ld-detail + .ld-detail { margin-top: 12px; }

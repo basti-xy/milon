@@ -31,19 +31,22 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ◐ Auswertung (früher Karte Trainingswoche): Stunden, Erkenntnisse, Zahlen, blätterbar (Pfeile, Wischen, Balken)
 - [x] ✓ Vorschau „Nächste Woche“ mit Abweichungen vom Original-Plan
 - [x] ◐ Gemeinsamer Kalender Gym / Dehnen / Wettkampf, 5 Wochen, blätterbar
+- [x] ✓ Jahre & Statistik (#/statistik, Kachel im Training-Tab, v37): Kilometer · Stunden · Einheiten · TSS · Schlaf · Gewicht,
+  Sportart wählbar, Zeitraum 1 Monat / 12 Wochen / 6 Monate / 1 Jahr / 2 Jahre / Alles (automatisch nach Tag/Woche/Monat gruppiert),
+  Balken antippen = Wert; Jahresvergleich aufsummiert; Jahresübersicht je Jahr (Summen, Monate, Höhepunkte, Wettkämpfe, Bestwerte)
 
 ## Heute (neu)
 - [x] ✓ Kopf mit KW · Planwoche · Phase, Datum, „Daten von …“ (iPad)
 - [x] ✓ Einschätzung (Ampel), Letzte Woche mit ✓ / ✗ / →, Link Ganze Auswertung
 - [x] ✓ Steht heute an: Plan-Einheiten (Details aufklappbar), Gym an den Gym-Tagen, Dehnen – direkt startbar
 - [x] ✓ 8 Kacheln mit Abweichung vom 28-Tage-Schnitt, Verlauf, HRV-Normalbereich, „G“ für Garmin-Schätzwerte
-- [x] ✓ Detailseite je Kachel: 2 Wochen / 1 Monat / 6 Monate
+- [x] ✓ Detailseite je Kachel: 2 Wochen / 1 Monat / 6 Monate / 1 Jahr / Alles (ab Garmin-Uhr), Achse ab 1 Jahr mit Jahreszahl (v37)
 - [x] ✓ Sport-Punkte mit Symbolen (erledigt gefüllt, offen als Ring), Legende
 - [x] ✓ Wochen-Routine als eigener Punkt in Wochenleiste und Kalender (erledigt; Ring am festen Wochentag, solange in der Woche offen)
 - [x] ✓ Diese Woche: Stunden, Sportarten, Wochenleiste (gefüllt = erledigt, Ring = offen), 12 Wochen (iPad)
 - [x] ✓ Wettkämpfe: nächste 2 + Saisonziel, Tage bis dahin
 - [x] ✓ Kachel Belastung: Fitness (mit Anstieg 7 Tage), Ermüdung, Form (Zone), ein Diagramm 12 Wochen mit drei Linien, Band „frisch“, Hinweis bei hohem Puls-Anteil
-- [x] ✓ Detailseite #/belastung: Verlauf (2 Wochen / 1 Monat / 6 Monate / Saison, Gesamt · Rad · Laufen · Schwimmen, Form als Balken mit Zonen, Vorschau gestrichelt, Vergleichsrennen grau, Zielkorridor als grünes Band + Satz „im Korridor / darunter / darüber“ (v36), genutzte Schwellen + Schätzung) und Info
+- [x] ✓ Detailseite #/belastung: Verlauf (2 Wochen / 1 Monat / 6 Monate / 1 Jahr / Saison / Alles, Gesamt · Rad · Laufen · Schwimmen, Form als Balken mit Zonen, Vorschau gestrichelt, Vergleichsrennen grau, Zielkorridor als grünes Band + Satz „im Korridor / darunter / darüber“ (v36), genutzte Schwellen + Schätzung) und Info
 - [x] ✓ Auswertung: Text zur Belastung (`load_note`) mit Link zum Verlauf
 - [x] ✓ Ohne Tagesdaten: Hinweis statt Fehler
 

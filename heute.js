@@ -31,7 +31,8 @@ async function loadHealth() {
       if (JSON.stringify(r.data) !== JSON.stringify(store.get(key, null))) { store.set(key, r.data); changed = true; }
     } catch { /* offline oder Datei fehlt – letzter Stand bleibt */ }
   }
-  if (changed && ['home', 'koerper', 'training', 'belastung', 'werte'].includes(currentRoute().name)) rerenderCurrent();
+  if (typeof loadStats === 'function' && await loadStats()) changed = true;   // statistik.js (health/stats.json)
+  if (changed && ['home', 'koerper', 'training', 'belastung', 'werte', 'statistik'].includes(currentRoute().name)) rerenderCurrent();
 }
 
 /* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
@@ -139,6 +140,7 @@ function firstSentence(t) {
 }
 const gBadge = (title = 'von Garmin berechnet') => `<span class="g-badge" title="${esc(title)}">G</span>`;
 const dateLong = (d) => d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+const dateYear = (k) => { const d = parseDay(k); return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`; };   // Achsen ab 1 Jahr
 const dateShort = (k) => { const d = parseDay(k); return `${WD_SHORT[(d.getDay() + 6) % 7]} ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.`; };
 const daysUntil = (k, now = new Date()) => Math.round((parseDay(k) - parseDay(dayKey(now))) / DAY_MS);
 
@@ -477,9 +479,9 @@ function renderAuswertung() {
 }
 
 /* =========================================================================
-   Körper – Detailseite einer Kachel (2 Wochen / 1 Monat / 6 Monate)
+   Körper – Detailseite einer Kachel (2 Wochen / 1 Monat / 6 Monate / 1 Jahr / Alles ab Garmin-Uhr)
    ========================================================================= */
-const KD_RANGES = [{ days: 14, label: '2 Wochen' }, { days: 30, label: '1 Monat' }, { days: 182, label: '6 Monate' }];
+const KD_RANGES = [{ days: 14, label: '2 Wochen' }, { days: 30, label: '1 Monat' }, { days: 182, label: '6 Monate' }, { days: 365, label: '1 Jahr' }, { days: -1, label: 'Alles' }];
 let kdDays = 30;
 const KD_NOTES = {
   hrv: 'HRV-Nachtwert (Messwert, Durchschnitt der Nacht). Das graue Band ist dein persönlicher Normalbereich – von Garmin berechnet.',
@@ -498,7 +500,7 @@ function renderKoerper(id) {
   if (!m) { redirect('#/'); return; }
   const dates = h?.dates || [];
   const all = h?.metrics?.[id] || [];
-  const n = Math.min(kdDays, dates.length);
+  const n = kdDays < 0 ? dates.length : Math.min(kdDays, dates.length);   // „Alles“ = ab Beginn der Garmin-Uhr
   const ds = dates.slice(-n);
   const tKey = todayKey();
   // Schritte: heutiger Tag ist noch nicht voll, unter 500 = Uhr nicht getragen
@@ -515,10 +517,10 @@ function renderKoerper(id) {
     <div class="k">${esc(m.label)} ${m.garmin_estimate ? gBadge() : ''}</div>
     <div class="kd-val" style="margin-top:6px">${esc(fmtMetric(m, m.value))}${m.unit ? `<small> ${esc(m.unit)}</small>` : id === 'steps' ? '<small> Ø/Tag (7 Tage)</small>' : ''}</div>
     <div class="mt-d" style="margin:4px 0 14px">${m.date ? esc(dateShort(m.date)) : ''} ${deltaHtml(m)}${m.avg28 != null ? ` · Ø 28 Tage ${esc(fmt(m.avg28))}` : ''}</div>
-    <div class="seg" role="tablist">${KD_RANGES.map((r) => `<button role="tab" class="${r.days === kdDays ? 'is-on' : ''}" aria-selected="${r.days === kdDays}" data-act="h-kd-range" data-days="${r.days}">${r.label}</button>`).join('')}</div>
+    <div class="seg st-seg" role="tablist">${KD_RANGES.map((r) => `<button role="tab" class="${r.days === kdDays ? 'is-on' : ''}" aria-selected="${r.days === kdDays}" data-act="h-kd-range" data-days="${r.days}">${r.label}</button>`).join('')}</div>
     <section class="tile" style="padding:12px 14px;margin-top:12px">
       ${chart || '<p class="small muted">Für diesen Zeitraum gibt es noch zu wenige Werte.</p>'}
-      ${ds.length ? `<div class="m small muted" style="display:flex;justify-content:space-between;margin-top:4px"><span>${esc(dateShort(ds[0]))}</span><span>${esc(dateShort(ds[ds.length - 1]))}</span></div>` : ''}
+      ${ds.length ? `<div class="m small muted" style="display:flex;justify-content:space-between;margin-top:4px"><span>${esc((kdDays < 0 || kdDays >= 365 ? dateYear : dateShort)(ds[0]))}</span><span>${esc((kdDays < 0 || kdDays >= 365 ? dateYear : dateShort)(ds[ds.length - 1]))}</span></div>` : ''}
       <div class="kd-stats">
         <div><span class="k">Ø</span><strong>${esc(fmt(avg))}</strong></div>
         <div><span class="k">Min</span><strong>${esc(fmt(nums.length ? Math.min(...nums) : null))}</strong></div>
@@ -590,6 +592,7 @@ function renderTraining() {
         <div class="sub">Wochenziel ${weeklyTarget()} · Gym-Tage ${esc(gymDays().map((x) => WD_SHORT[(x + 6) % 7]).join(', '))}</div>
       </section>` : ''}
     </div>
+    ${typeof statsTileHtml === 'function' ? statsTileHtml() : ''}
     <div class="tr-cols">
       <div>
         <h2 class="section-title">Gym</h2>
