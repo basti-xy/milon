@@ -43,7 +43,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ✓ Diese Woche: Stunden, Sportarten, Wochenleiste (gefüllt = erledigt, Ring = offen), 12 Wochen (iPad)
 - [x] ✓ Wettkämpfe: nächste 2 + Saisonziel, Tage bis dahin
 - [x] ✓ Kachel Belastung: Fitness (mit Anstieg 7 Tage), Ermüdung, Form (Zone), ein Diagramm 12 Wochen mit drei Linien, Band „frisch“, Hinweis bei hohem Puls-Anteil
-- [x] ✓ Detailseite #/belastung: Verlauf (2 Wochen / 1 Monat / 6 Monate / Saison, Gesamt · Rad · Laufen · Schwimmen, Form als Balken mit Zonen, Vorschau gestrichelt, Vergleichsrennen grau, genutzte Schwellen + Schätzung) und Info
+- [x] ✓ Detailseite #/belastung: Verlauf (2 Wochen / 1 Monat / 6 Monate / Saison, Gesamt · Rad · Laufen · Schwimmen, Form als Balken mit Zonen, Vorschau gestrichelt, Vergleichsrennen grau, Zielkorridor als grünes Band + Satz „im Korridor / darunter / darüber“ (v36), genutzte Schwellen + Schätzung) und Info
 - [x] ✓ Auswertung: Text zur Belastung (`load_note`) mit Link zum Verlauf
 - [x] ✓ Ohne Tagesdaten: Hinweis statt Fehler
 

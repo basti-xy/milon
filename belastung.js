@@ -24,7 +24,7 @@ const zoneClass = (z) => (ZONE_BAD.has(z) ? 'bad' : ZONE_GOOD.has(z) ? 'ok' : ''
 const legendLine = (kind) => `<svg class="ld-key ld-${kind}" viewBox="0 0 18 6" aria-hidden="true"><line x1="1" y1="3" x2="17" y2="3"/></svg>`;
 
 /* ---------- Diagramm: mehrere Linien, eine y-Achse ---------- */
-function loadChartSvg({ dates, lines, bars = null, zones = null, freshBand = null, yMin, yMax, h = 120, cls = 'ld-chart', label = '', ticks = [] }) {
+function loadChartSvg({ dates, lines, bars = null, zones = null, freshBand = null, band = null, yMin, yMax, h = 120, cls = 'ld-chart', label = '', ticks = [] }) {
   const n = dates.length;
   if (n < 2) return '';
   const W = 100;
@@ -39,6 +39,15 @@ function loadChartSvg({ dates, lines, bars = null, zones = null, freshBand = nul
       if (hi > lo) out += `<rect x="0" y="${yf(hi)}" width="${W}" height="${(y(lo) - y(hi)).toFixed(2)}" class="ld-zone z-${esc(z.id)}"/>`;
       lo = Math.max(lo, hi);
     }
+  }
+  if (band) {   // Zielkorridor: Fläche zwischen band.lo und band.hi, je zusammenhängendem Stück
+    let seg = [];
+    const flush = () => {
+      if (seg.length > 1) out += `<polygon points="${seg.map((i) => `${x(i).toFixed(2)},${yf(band.hi[i])}`).concat(seg.slice().reverse().map((i) => `${x(i).toFixed(2)},${yf(band.lo[i])}`)).join(' ')}" class="ld-band"/>`;
+      seg = [];
+    };
+    band.lo.forEach((v, i) => { if (v == null || band.hi[i] == null) flush(); else seg.push(i); });
+    flush();
   }
   if (freshBand) out += `<rect x="0" y="${yf(freshBand[1])}" width="${W}" height="${(y(freshBand[0]) - y(freshBand[1])).toFixed(2)}" class="ld-fresh"/>`;
   for (const t of ticks) if (t !== 0 && t > yMin && t < yMax) out += `<line x1="0" x2="${W}" y1="${yf(t)}" y2="${yf(t)}" class="ld-grid" vector-effect="non-scaling-stroke"/>`;
@@ -89,7 +98,7 @@ function loadSlice(h, days) {
   }
   const pick = (arr) => (arr || []).slice(from);
   return { dates: h.dates.slice(from), ctl: pick(h.ctl), atl: pick(h.atl), tsb: pick(h.tsb), cmp_ctl: pick(h.cmp_ctl), cmp_tsb: pick(h.cmp_tsb),
-    ctl_bike: pick(h.ctl_bike), ctl_run: pick(h.ctl_run), ctl_swim: pick(h.ctl_swim) };
+    ctl_bike: pick(h.ctl_bike), ctl_run: pick(h.ctl_run), ctl_swim: pick(h.ctl_swim), corr_lo: pick(h.corr_lo), corr_hi: pick(h.corr_hi) };
 }
 
 /* ---------- Kachel „Belastung“ auf Heute ---------- */
@@ -149,9 +158,13 @@ function loadVerlaufHtml(t, h) {
     ...(ahead.length && loadSport === 'all' ? [{ values: fut('ctl'), cls: 'l-ctl l-pv' }] : []),
     { values: pad(fit, ahead.length), cls: 'l-ctl', dot: true },
   ];
-  const ax = loadAxis(lines.flatMap((l) => l.values), { step: 20 });
+  // Zielkorridor der Fitness (aus den Daten, thresholds.json → load.korridor), nur in der Gesamtansicht
+  const bandSide = (k) => s[k].concat((pv?.[k] || []).slice(0, ahead.length), Array(Math.max(0, ahead.length - (pv?.[k] || []).length)).fill(null));
+  const band = loadSport === 'all' && [...s.corr_lo, ...(pv?.corr_lo || [])].some((v) => v != null) ? { lo: bandSide('corr_lo'), hi: bandSide('corr_hi') } : null;
+  const ax = loadAxis([...lines.flatMap((l) => l.values), ...(band ? [...band.lo, ...band.hi] : [])], { step: 20 });
   if (ax.yMin < 0) { ax.yMin = 0; ax.ticks = ax.ticks.filter((t) => t >= 0); }
-  const top = loadChartSvg({ dates, lines, yMin: ax.yMin, yMax: ax.yMax, ticks: ax.ticks, h: 110, cls: 'ld-chart is-big', label: 'Fitness und Ermüdung' });
+  const top = loadChartSvg({ dates, lines, band, yMin: ax.yMin, yMax: ax.yMax, ticks: ax.ticks, h: 110, cls: 'ld-chart is-big', label: 'Fitness und Ermüdung' });
+  const kor = t.corridor;
   const tsbAll = pad(s.tsb, ahead.length);
   const tsbPv = ahead.length ? Array(s.dates.length).fill(null).concat((pv.tsb || []).slice(0, ahead.length)) : null;
   const tv = [...s.tsb, ...(tsbPv || [])].filter((v) => v != null);
@@ -188,6 +201,7 @@ function loadVerlaufHtml(t, h) {
         ${showAtl ? `<span>${legendLine('atl')}Ermüdung</span>` : ''}
         ${ahead.length && loadSport === 'all' ? `<span>${legendLine('pv')}Vorschau aus dem Plan</span>` : ''}
         ${cm && loadSport === 'all' ? `<span>${legendLine('cmp')}${esc(cm.name)}</span>` : ''}
+        ${band ? '<span><i class="ld-key-band" aria-hidden="true"></i>Zielkorridor</span>' : ''}
       </div>
       ${top}
       <div class="k ld-sub">Form (Fitness − Ermüdung)</div>
@@ -195,6 +209,7 @@ function loadVerlaufHtml(t, h) {
       <div class="m small muted ld-axis"><span>${esc(dateShort(first))}</span>${ahead.length ? `<span>heute</span>` : ''}<span>${esc(dateShort(last))}</span></div>
       ${loadSport !== 'all' ? '<p class="small muted">Je Sportart nur Fitness – Form und Ermüdung gibt es nur gesamt.</p>' : ''}
     </section>
+    ${kor ? `<p class="small ld-note ld-kor ${kor.status === 'im Korridor' ? 'ok' : 'warn'}">Zielkorridor${kor.race ? ` bis ${esc(kor.race)}` : ''}: heute ${fmtLoad(kor.lo)}–${fmtLoad(kor.hi)}, du liegst ${esc(kor.status)}${kor.diff ? ` (${fmtSigned(kor.diff)})` : ''}.${kor.next ? ` Nächster Punkt ${esc(dateShort(kor.next.date))}: ${fmtLoad(kor.next.lo)}–${fmtLoad(kor.next.hi)}.` : ''}${kor.race_tsb ? ` Am Renntag Form ${fmtSigned(kor.race_tsb[0])} bis ${fmtSigned(kor.race_tsb[1])}.` : ''}${kor.ramp_warn ? ' Die Fitness steigt gerade schneller als ca. 5 Punkte pro Woche.' : ''}</p>` : ''}
     ${cm ? `<p class="small muted ld-note">${esc(cm.name)} bei gleich vielen Tagen bis zum Rennen (${t.goal ? `${esc(String(t.goal.days))} Tage bis ${esc(t.goal.name)}` : ''}): Fitness ${fmtLoad(cm.ctl)}, Form ${fmtSigned(cm.tsb)}.</p>` : ''}
     ${ahead.length ? '<p class="small muted ld-note">Gestrichelt: Schätzung aus dem Plan (Dauer der geplanten Einheiten × typische Last der letzten Wochen).</p>' : ''}
     <section class="tile ld-thr">
@@ -243,6 +258,9 @@ function loadInfoHtml() {
       positiv, aber die HRV schlecht, gilt die HRV. 100 TSS Laufen belasten den Körper mehr als 100 TSS Rad – deshalb gibt es
       die Fitness auch je Sportart. Und stimmt eine Schwelle (FTP, Schwellenpace) nicht, verschiebt sich alles.
       Aussagekräftig ist der <strong>Verlauf</strong>, nicht ein einzelner Tageswert.</p>
+    <p><strong>Zielkorridor</strong> (grünes Band): der Bereich, in dem die Fitness bis zum Saisonziel liegen soll – mit Höhepunkt am Ende
+      der letzten großen Trainingsphase und etwas Abfall im Taper. Er ist ein Frühwarnsystem: deutlich darunter fehlt Training,
+      deutlich darüber steigt das Verletzungsrisiko. Eine Zielzeit sagt er nicht voraus.</p>
   </section>`;
 }
 
