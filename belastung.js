@@ -7,7 +7,7 @@
    Kachel auf „Heute“ (loadTileHtml) und Detailseite #/belastung mit den Reitern Verlauf und Info.
    ========================================================================= */
 
-const LOAD_RANGES = [{ days: 14, label: '2 Wochen' }, { days: 30, label: '1 Monat' }, { days: 182, label: '6 Monate' }, { days: 0, label: 'Saison' }];
+const LOAD_RANGES = [{ days: 14, label: '2 Wochen' }, { days: 30, label: '1 Monat' }, { days: 182, label: '6 Monate' }, { days: 365, label: '1 Jahr' }, { days: 0, label: 'Saison' }, { days: -1, label: 'Alles' }];
 let loadDays = 30;
 let loadTab = 'verlauf';
 let loadSport = 'all';
@@ -87,10 +87,11 @@ function loadAxis(vals, { min = null, max = null, step = 20 } = {}) {
   return { yMin: lo, yMax: hi, ticks };
 }
 
-/** Werte der letzten `days` Tage (0 = Saison ab Woche 1 des Plans). */
+/** Werte der letzten `days` Tage (0 = Saison ab Woche 1 des Plans, −1 = alles ab Beginn der Berechnung). */
 function loadSlice(h, days) {
   let from = 0;
-  if (days > 0) from = Math.max(0, h.dates.length - days);
+  if (days < 0) from = 0;
+  else if (days > 0) from = Math.max(0, h.dates.length - days);
   else {
     const start = healthData()?.season_start;
     const i = start ? h.dates.findIndex((d) => d >= start) : -1;
@@ -192,7 +193,7 @@ function loadVerlaufHtml(t, h) {
       <div><span class="k">Form</span><strong>${fmtSigned(t.tsb)}</strong><small class="${zoneClass(t.zone)}">${esc(t.zone_label || '')}</small></div>
     </div>
     <div class="ld-ctrl">
-      <div class="seg" role="tablist">${LOAD_RANGES.map((r) => `<button role="tab" class="${r.days === loadDays ? 'is-on' : ''}" aria-selected="${r.days === loadDays}" data-act="h-ld-range" data-days="${r.days}">${r.label}</button>`).join('')}</div>
+      <div class="seg st-seg" role="tablist">${LOAD_RANGES.map((r) => `<button role="tab" class="${r.days === loadDays ? 'is-on' : ''}" aria-selected="${r.days === loadDays}" data-act="h-ld-range" data-days="${r.days}">${r.label}</button>`).join('')}</div>
       <div class="seg" role="tablist">${LOAD_SPORTS.map(([id, l]) => `<button role="tab" class="${id === loadSport ? 'is-on' : ''}" aria-selected="${id === loadSport}" data-act="h-ld-sport" data-v="${id}">${l}</button>`).join('')}</div>
     </div>
     <section class="tile ld-detail">
@@ -206,7 +207,7 @@ function loadVerlaufHtml(t, h) {
       ${top}
       <div class="k ld-sub">Form (Fitness − Ermüdung)</div>
       ${form}
-      <div class="m small muted ld-axis"><span>${esc(dateShort(first))}</span>${ahead.length ? `<span>heute</span>` : ''}<span>${esc(dateShort(last))}</span></div>
+      <div class="m small muted ld-axis"><span>${esc((s.dates.length > 300 ? dateYear : dateShort)(first))}</span>${ahead.length ? `<span>heute</span>` : ''}<span>${esc((s.dates.length > 300 ? dateYear : dateShort)(last))}</span></div>
       ${loadSport !== 'all' ? '<p class="small muted">Je Sportart nur Fitness – Form und Ermüdung gibt es nur gesamt.</p>' : ''}
     </section>
     ${kor ? `<p class="small ld-note ld-kor ${kor.status === 'im Korridor' ? 'ok' : 'warn'}">Zielkorridor${kor.race ? ` bis ${esc(kor.race)}` : ''}: heute ${fmtLoad(kor.lo)}–${fmtLoad(kor.hi)}, du liegst ${esc(kor.status)}${kor.diff ? ` (${fmtSigned(kor.diff)})` : ''}.${kor.next ? ` Nächster Punkt ${esc(dateShort(kor.next.date))}: ${fmtLoad(kor.next.lo)}–${fmtLoad(kor.next.hi)}.` : ''}${kor.race_tsb ? ` Am Renntag Form ${fmtSigned(kor.race_tsb[0])} bis ${fmtSigned(kor.race_tsb[1])}.` : ''}${kor.ramp_warn ? ' Die Fitness steigt gerade schneller als ca. 5 Punkte pro Woche.' : ''}</p>` : ''}
@@ -266,7 +267,7 @@ function loadInfoHtml() {
 
 function handleLoadAction(act, el) {
   if (act === 'h-ld-tab') loadTab = el.dataset.v === 'info' ? 'info' : 'verlauf';
-  else if (act === 'h-ld-range') loadDays = Number(el.dataset.days) || 0;
+  else if (act === 'h-ld-range') loadDays = Number(el.dataset.days) || 0;   // −1 = Alles
   else if (act === 'h-ld-sport') loadSport = el.dataset.v || 'all';
   else return false;
   const y = window.scrollY;

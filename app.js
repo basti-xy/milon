@@ -1092,7 +1092,7 @@ function rerenderCurrent() {
   if (run || modalOpen() || !DATA) return;
   const { name: n, arg } = currentRoute();
   // Unterseiten mit Eingaben (Gym erfassen) nicht neu zeichnen, sonst gingen Eingaben verloren
-  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper' || n === 'belastung') route({ keepScroll: true });
+  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper' || n === 'belastung' || n === 'statistik') route({ keepScroll: true });
 }
 
 function route({ keepScroll = false } = {}) {
@@ -1148,6 +1148,9 @@ function route({ keepScroll = false } = {}) {
       return;
     case 'belastung':
       renderBelastung(); // belastung.js
+      return;
+    case 'statistik':
+      renderStatistik(); // statistik.js
       return;
     case 'werte':
       renderWerte();
@@ -1969,6 +1972,7 @@ app.addEventListener('click', async (e) => {
   if (act.startsWith('gym-')) { handleGymAction(act, el); return; } // gym.js
   if (act.startsWith('h-')) { handleHeuteAction(act, el); return; } // heute.js
   if (act.startsWith('push-')) { handlePushAction(act); return; } // push.js
+  if (act.startsWith('st-')) { handleStatsAction(act, el); return; } // statistik.js
   if (act === 'set-gymday') {
     const day = Number(el.dataset.day);
     const cur = new Set(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays);
