@@ -118,6 +118,7 @@ body::before {
   background-size: 180px 180px;
 }
 #app, #modal-root { position: relative; z-index: 1; }
+#modal-root { z-index: 30; }   /* Fenster über der Navigation (z-index 20) */
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; }
 code { font-family: var(--mono); font-size: .85em; background: var(--fill); padding: 1px 5px; border-radius: 4px; }
@@ -933,3 +934,41 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .st-races strong { font-weight: 600; font-size: 14px; }
 .st-pr { font-size: 12.5px; color: var(--race-text); }
 .ld-detail + .section-title, .ld-detail + .ld-detail { margin-top: 12px; }
+
+/* ---------- Einheit erfassen (einheit.js) ---------- */
+.u-btn { flex: none; align-self: center; }
+.u-sheet [hidden] { display: none !important; }
+.u-btn.is-done { color: var(--good); border-color: var(--good); }
+.u-backdrop { align-items: end; padding: 0; }
+.u-sheet { width: min(560px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: var(--radius) var(--radius) 0 0;
+  padding: 16px 18px calc(16px + var(--safe-bottom, 0px)); display: grid; gap: 14px; }
+@media (min-width: 768px) { .u-backdrop { align-items: center; padding: 16px; } .u-sheet { border-radius: var(--radius); } }
+.u-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.u-head h2 { margin: 2px 0 0; }
+.u-field { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.u-field legend { padding: 0; margin-bottom: 6px; }
+.u-inrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.u-inrow input { width: 110px; min-height: 46px; padding: 0 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--fill); color: var(--ink); font: inherit; font-size: 16px; }
+.u-unit { color: var(--text-2); margin-left: -2px; }
+.u-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.u-chip { min-height: 40px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.u-chip .m { color: var(--text-2); margin-left: 4px; }
+.u-chip:active { background: var(--fill); }
+.u-gummy .small { min-width: 92px; }
+.u-parts { margin: 0; min-height: 1.2em; }
+.u-field textarea { width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--fill); color: var(--ink); font: inherit; font-size: 16px; resize: vertical; }
+.u-seg { align-self: start; }
+.u-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.u-rpe button { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+.u-rpe button.is-on, .u-seg button.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.modal-actions.u-three { grid-template-columns: 1fr 1fr 1fr; }
+.u-bottles { list-style: none; padding: 0; margin: 6px 0 0; flex: 1 1 100%; }
+.u-bottles li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--hair); }
+.u-bottles li > span:first-child { flex: 1; }
+.u-bottle-add { flex: 1 1 100%; }
+.u-bottle-add input[type=number] { flex: 0 0 90px; }
+.tw-units { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
+.tw-units summary { cursor: pointer; color: var(--text-2); min-height: 32px; display: flex; align-items: center; }
+.u-list { list-style: none; padding: 0; margin: 6px 0 0; }
+.u-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--hair); }
+.u-li-main { flex: 1; min-width: 0; }
