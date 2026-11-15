@@ -12,7 +12,7 @@
 const UNIT_LOG_PATH = 'einheiten.json';
 const UNIT_KEYS = { entries: 'milon.units.entries.v1', deleted: 'milon.units.deleted.v1' };
 const GUMMY_CARBS_PER_100G = 77;   // Gummibärchen: 100 g Produkt ≈ 77 g Kohlenhydrate (Angabe des Nutzers 15.11.2026)
-const FLUID_STEPS = [500, 750];    // Getränk-Knöpfe in ml (Angabe des Nutzers)
+const FLUID_STEPS = [250, 500, 750];   // Getränk-Knöpfe in ml (Angabe des Nutzers 15.11.2026)
 const GUT_OPTIONS = [['gut', 'gut'], ['grenzwertig', 'grenzwertig'], ['probleme', 'Probleme']];
 
 function getUnitEntries() { const s = store.get(UNIT_KEYS.entries, []); return Array.isArray(s) ? s.filter((x) => x && x.id) : []; }
