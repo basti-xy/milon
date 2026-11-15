@@ -237,11 +237,20 @@ function todoHtml(d, s, a, now) {
   for (const it of (day?.planned || []).filter((x) => x.sport !== 'strength')) {
     if (!it.done && it.min) openMin += it.min;
     const title = `${SPORT_NAME[it.sport] || 'Einheit'} · ${it.title}`;
+    const ubtn = typeof unitBtnHtml === 'function' && (it.uid || it.activity_id)
+      ? unitBtnHtml({ date: tKey, sport: it.sport, title: it.title, planUid: it.uid || null, activityId: it.activity_id || null }) : '';
     rows.push(`<div class="h-row ${it.done ? 'is-done' : ''}">
       <span class="sdot s-${esc(it.sport)}" aria-hidden="true"></span>
       <div class="h-row-main">${it.desc ? `<details><summary><div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${[it.min ? `${fmtHM(it.min / 60)} h` : '', it.time && it.time !== '00:00' ? it.time : '', 'aus dem Plan · Details'].filter(Boolean).join(' · ')}</div></summary><p class="h-row-desc">${esc(it.desc)}</p></details>`
         : `<div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${it.min ? `${fmtHM(it.min / 60)} h · ` : ''}aus dem Plan</div>`}</div>
+      ${ubtn}
     </div>`);
+  }
+  // 1b. Erledigte Garmin-Einheiten ohne Plan-Eintrag (zum Erfassen von Verpflegung und Notiz)
+  for (const x of (day?.done || []).filter((z) => z.id && !z.planned && ['swim', 'bike', 'run'].includes(z.sport))) {
+    rows.push(`<div class="h-row is-done"><span class="sdot s-${esc(x.sport)}" aria-hidden="true"></span>
+      <div class="h-row-main"><div class="h-row-title">${esc(`${SPORT_NAME[x.sport] || 'Einheit'} · ${x.title}`)}</div><div class="h-row-sub">${x.min ? `${fmtHM(x.min / 60)} h · ` : ''}aufgezeichnet</div></div>
+      ${typeof unitBtnHtml === 'function' ? unitBtnHtml({ date: tKey, sport: x.sport, title: x.title, activityId: x.id }) : ''}</div>`);
   }
   // 2. Gym (nächster Split) an den Gym-Tagen, solange das Wochenziel offen ist – oder wenn heute erledigt
   if (typeof gymPlans === 'function' && gymPlans()) {

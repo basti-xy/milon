@@ -390,9 +390,12 @@ async function runSync() {
     const gymChanged = typeof syncGymLog === 'function' ? await syncGymLog() : false;
     let sharedChanged = false;
     try { sharedChanged = await syncSharedSettings(); } catch { /* Gym-Tage beim nächsten Abgleich */ }
+    // Einheit erfassen (einheit.js) – eigene Datei einheiten.json
+    let unitsChanged = false;
+    try { unitsChanged = typeof syncUnitLog === 'function' ? await syncUnitLog() : false; } catch { sync.again = true; }
     saveMeta({ lastSyncAt: new Date().toISOString() });
     setSyncStatus('ok', '');
-    if (snapshotKey(merged) !== before || gymChanged || sharedChanged) refreshAfterSync();
+    if (snapshotKey(merged) !== before || gymChanged || sharedChanged || unitsChanged) refreshAfterSync();
   } catch (e) {
     const code = e?.code || 'other';
     setSyncStatus(code === 'network' ? 'offline' : 'error', e?.message || 'Unbekannter Fehler beim Abgleich.');
@@ -408,18 +411,29 @@ async function runSync() {
    Alle übrigen Einstellungen bleiben pro Gerät. */
 const SHARED_SETTINGS_PATH = 'milon-settings.json';
 const sharedLocal = () => ({ app: 'milon-settings', version: 1,
-  gymDays: Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays, gymDaysUpdatedAt: cfg.gymDaysUpdatedAt || '' });
+  gymDays: Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays, gymDaysUpdatedAt: cfg.gymDaysUpdatedAt || '',
+  bottles: Array.isArray(cfg.bottles) ? cfg.bottles : [], bottlesUpdatedAt: cfg.bottlesUpdatedAt || '' });   // Flaschen: einheit.js
+/** Je Teil (Gym-Tage, Flaschen) gewinnt die neueste Änderung. */
 function mergeShared(local, remote) {
-  if (!remote || !Array.isArray(remote.gymDays)) return local;
-  return String(local.gymDaysUpdatedAt || '') > String(remote.gymDaysUpdatedAt || '') ? { ...remote, ...local } : { ...local, ...remote };
+  if (!remote || typeof remote !== 'object') return local;
+  const out = { ...remote, ...local };
+  for (const [k, t] of [['gymDays', 'gymDaysUpdatedAt'], ['bottles', 'bottlesUpdatedAt']]) {
+    const useLocal = String(local[t] || '') > String(remote[t] || '') || !Array.isArray(remote[k]);
+    out[k] = useLocal ? local[k] : remote[k];
+    out[t] = useLocal ? local[t] || '' : remote[t] || '';
+  }
+  return out;
 }
-const sameShared = (a, b) => JSON.stringify([a?.gymDays, a?.gymDaysUpdatedAt || '']) === JSON.stringify([b?.gymDays, b?.gymDaysUpdatedAt || '']);
+const sameShared = (a, b) => JSON.stringify([a?.gymDays, a?.gymDaysUpdatedAt || '', a?.bottles || [], a?.bottlesUpdatedAt || ''])
+  === JSON.stringify([b?.gymDays, b?.gymDaysUpdatedAt || '', b?.bottles || [], b?.bottlesUpdatedAt || '']);
 async function syncSharedSettings() {
-  const res = await GHSync.syncFile(SHARED_SETTINGS_PATH, { local: sharedLocal(), merge: mergeShared, equals: sameShared, message: 'Milon: Gym-Tage' });
+  const res = await GHSync.syncFile(SHARED_SETTINGS_PATH, { local: sharedLocal(), merge: mergeShared, equals: sameShared, message: 'Milon: gemeinsame Einstellungen' });
   const d = mergeShared(sharedLocal(), res.data);   // falls während des Abgleichs lokal geändert wurde
   if (sameShared(d, sharedLocal())) return false;
   saveSetting('gymDays', d.gymDays);
   saveSetting('gymDaysUpdatedAt', d.gymDaysUpdatedAt || '');
+  saveSetting('bottles', Array.isArray(d.bottles) ? d.bottles : []);
+  saveSetting('bottlesUpdatedAt', d.bottlesUpdatedAt || '');
   return true;
 }
 
@@ -1442,6 +1456,7 @@ async function loadTraining() {
 }
 
 let trainingIdx = 0; // 0 = neueste Woche in weekly.json, höher = ältere Wochen
+let trainingUnitsOpen = false; // „Einheiten der Woche“ aufgeklappt (bleibt beim Blättern und nach dem Speichern offen)
 
 function trainingHtml() {
   const d = trainingData();
@@ -1492,6 +1507,12 @@ function trainingHtml() {
     ${gym?.sessions.length ? `<p class="tw-gymlist small muted">Gym: ${gym.sessions.map((s) => esc(`${fmtDate(s.date)} ${s.splitName}`)).join(' · ')}</p>` : ''}
     ${gym ? `<p class="tw-gymlist small">Gym-Streak <strong>${gym.streak} ${plural(gym.streak, 'Woche', 'Wochen')}</strong> <span class="muted">· Rekord ${gym.best}</span></p>` : ''}
     ${rec ? `<div class="tw-rec small">${rec}</div>` : ''}
+    ${Array.isArray(w.units) && w.units.length && typeof unitBtnHtml === 'function' ? `<details class="tw-units" ${trainingUnitsOpen ? 'open' : ''}>
+      <summary class="small">Einheiten der Woche · Verpflegung und Notiz erfassen</summary>
+      <ul class="u-list">${w.units.map((u) => `<li><span class="tw-dot s-${esc(u.sport)}" aria-hidden="true"></span>
+        <div class="u-li-main"><div>${esc(u.title)}</div><div class="small muted">${esc(fmtDate(u.date))} · ${fmtHours(u.min / 60)} h${u.km ? ` · ${fmtNum(u.km, u.sport === 'bike' ? 0 : 1)} km` : ''}</div></div>
+        ${unitBtnHtml({ date: u.date, sport: u.sport, title: u.title, activityId: u.id })}</li>`).join('')}</ul>
+    </details>` : ''}
     ${idx === 0 ? nextWeekHtml(d.next) : ''}
   </section>`;
 }
@@ -1800,6 +1821,7 @@ function renderSettings() {
         <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist. Gilt für alle Geräte${GHSync.getConfig() ? '' : ' (nach dem Verbinden)'}</div></div>
         <div class="day-chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-act="set-gymday" data-day="${d}" class="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d) ? 'is-on' : ''}" aria-pressed="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d)}">${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d]}</button>`).join('')}</div>
       </div>
+      ${typeof bottlesSettingsHtml === 'function' ? bottlesSettingsHtml() : ''}
       <div class="set-row is-wrap">
         <div class="set-text"><div class="set-label">Darstellung der App</div><div class="set-hint">Heute, Training, Werte, Einstellungen. Automatisch = wie iPhone/iPad</div></div>
         <div class="seg" role="group" aria-label="Darstellung der App">${[['light', 'Hell'], ['dark', 'Dunkel'], ['auto', 'Automatisch']].map(([v, l]) => `<button data-act="set-apptheme" data-v="${v}" class="${(cfg.appTheme || 'light') === v ? 'is-on' : ''}" aria-pressed="${(cfg.appTheme || 'light') === v}">${l}</button>`).join('')}</div>
@@ -1973,6 +1995,7 @@ app.addEventListener('click', async (e) => {
   if (act.startsWith('h-')) { handleHeuteAction(act, el); return; } // heute.js
   if (act.startsWith('push-')) { handlePushAction(act); return; } // push.js
   if (act.startsWith('st-')) { handleStatsAction(act, el); return; } // statistik.js
+  if (act.startsWith('u-')) { handleUnitAction(act, el); return; } // einheit.js
   if (act === 'set-gymday') {
     const day = Number(el.dataset.day);
     const cur = new Set(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays);

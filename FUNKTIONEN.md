@@ -39,6 +39,9 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ✓ Kopf mit KW · Planwoche · Phase, Datum, „Daten von …“ (iPad)
 - [x] ✓ Einschätzung (Ampel), Letzte Woche mit ✓ / ✗ / →, Link Ganze Auswertung
 - [x] ✓ Steht heute an: Plan-Einheiten (Details aufklappbar), Gym an den Gym-Tagen, Dehnen – direkt startbar
+- [x] ✓ Einheit erfassen (v38): Knopf an Plan- und Garmin-Einheiten (Heute) und unter „Einheiten der Woche“ (Auswertung) → Fenster mit
+  Kohlenhydraten (Flaschen aus den Einstellungen + zuletzt benutzte Mengen, Gummibärchen-Umrechnung), Getränk (+500/+750), Verträglichkeit,
+  „Wie lief’s?“, Belastungsempfinden 1–10; „✓ Erfasst“ am Knopf, Bearbeiten und Löschen; Flaschen in den Einstellungen (alle Geräte)
 - [x] ✓ 8 Kacheln mit Abweichung vom 28-Tage-Schnitt, Verlauf, HRV-Normalbereich, „G“ für Garmin-Schätzwerte
 - [x] ✓ Detailseite je Kachel: 2 Wochen / 1 Monat / 6 Monate / 1 Jahr / Alles (ab Garmin-Uhr), Achse ab 1 Jahr mit Jahreszahl (v37)
 - [x] ✓ Sport-Punkte mit Symbolen (erledigt gefüllt, offen als Ring), Legende
