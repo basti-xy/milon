@@ -14,6 +14,25 @@ const UNIT_KEYS = { entries: 'milon.units.entries.v1', deleted: 'milon.units.del
 const GUMMY_CARBS_PER_100G = 77;   // Gummibärchen: 100 g Produkt ≈ 77 g Kohlenhydrate (Angabe des Nutzers 15.11.2026)
 const FLUID_STEPS = [250, 500, 750];   // Getränk-Knöpfe in ml (Angabe des Nutzers 15.11.2026)
 const GUT_OPTIONS = [['gut', 'gut'], ['grenzwertig', 'grenzwertig'], ['probleme', 'Probleme']];
+/* Belastungsempfinden – feste Bedeutung jeder Zahl, damit alle Einheiten mit demselben Maßstab bewertet werden
+   (Wunsch des Nutzers 17.11.2026). Grundlage: Borg-CR10-Skala in der Form von Foster et al. (2001, „Session-RPE“):
+   1, 2, 3, 4, 5, 7, 10 nach Foster; Texte für 6, 8, 9 und die Ausdauer-Beispiele (Sprechtest, Bereiche) eigene Ergänzung.
+   Bewertet wird die ganze Einheit, nicht der härteste Moment (Foster: ca. 30 min danach). Gleiche Tabelle in
+   app-daten/training/ERKENNTNISSE.md – bei Änderungen beide anpassen. */
+const RPE_SCALE = {
+  1: ['Sehr, sehr leicht', 'Ausrollen, wie Spazierengehen'],
+  2: ['Leicht', 'Ganz locker, man könnte ewig weitermachen'],
+  3: ['Moderat', 'Lockerer Grundlagenbereich, ganze Sätze gehen problemlos'],
+  4: ['Etwas fordernd', 'Lange Grundlage oder oberer Grundlagenbereich, Sätze gehen noch'],
+  5: ['Fordernd', 'Tempobereich, nur noch kurze Sätze'],
+  6: ['Fordernd+', 'Zwischen Tempo und Schwelle, Konzentration nötig'],
+  7: ['Sehr fordernd', 'Schwellenbereich, nur noch einzelne Wörter'],
+  8: ['Sehr hart', 'Harte Intervalle, am Ende nur mit Überwindung'],
+  9: ['Extrem hart', 'Fast am Limit, kaum länger durchzuhalten'],
+  10: ['Maximal', 'Mehr ging nicht, wie ein Wettkampf-Endspurt'],
+};
+const RPE_MARKS = { 1: 'sehr leicht', 3: 'moderat', 5: 'fordernd', 7: 'sehr fordernd', 10: 'maximal' };   // Kurzwörter unter der Reihe
+const rpeText = (n) => (RPE_SCALE[n] ? `${n} – ${RPE_SCALE[n][0]}: ${RPE_SCALE[n][1]}` : 'Zahl antippen – die Bedeutung erscheint hier.');
 
 function getUnitEntries() { const s = store.get(UNIT_KEYS.entries, []); return Array.isArray(s) ? s.filter((x) => x && x.id) : []; }
 function getUnitDeleted() { const d = store.get(UNIT_KEYS.deleted, []); return Array.isArray(d) ? d : []; }
@@ -141,8 +160,11 @@ function openUnitSheet(it) {
       <fieldset class="u-field"><legend class="k">Wie lief’s?</legend>
         <textarea id="u-note" rows="3" maxlength="2000" placeholder="Gefühl, Beine, Bauch, Wetter …">${esc(st.note)}</textarea>
       </fieldset>
-      <fieldset class="u-field"><legend class="k">Belastungsempfinden <span class="muted">(optional, 1 = sehr leicht, 10 = maximal)</span></legend>
-        <div class="u-rpe" role="radiogroup">${Array.from({ length: 10 }, (_, i) => i + 1).map((n) => `<button type="button" role="radio" data-u-rpe="${n}" class="${st.rpe === n ? 'is-on' : ''}" aria-checked="${st.rpe === n}">${n}</button>`).join('')}</div>
+      <fieldset class="u-field"><legend class="k">Belastungsempfinden <span class="muted">(optional)</span></legend>
+        <p class="u-rpe-hint muted">Ganze Einheit bewerten, nicht den härtesten Moment.</p>
+        <div class="u-rpe" role="radiogroup">${Array.from({ length: 10 }, (_, i) => i + 1).map((n) => `<button type="button" role="radio" data-u-rpe="${n}" class="${st.rpe === n ? 'is-on' : ''}" aria-checked="${st.rpe === n}" aria-label="${n} – ${RPE_SCALE[n][0]}">${n}</button>`).join('')}</div>
+        <div class="u-rpe-marks" aria-hidden="true">${Object.entries(RPE_MARKS).map(([n, w]) => `<span style="grid-column:${n}" class="m${n}">${w}</span>`).join('')}</div>
+        <p class="u-rpe-desc ${st.rpe ? '' : 'muted'}" aria-live="polite">${esc(rpeText(st.rpe))}</p>
       </fieldset>
       <div class="modal-actions ${old ? 'u-three' : ''}">
         ${old ? '<button type="button" class="btn btn-ghost" data-u-delete>Löschen</button>' : ''}
@@ -194,6 +216,9 @@ function openUnitSheet(it) {
       const n = Number(t.dataset.uRpe);
       st.rpe = st.rpe === n ? null : n;
       root.querySelectorAll('[data-u-rpe]').forEach((b) => { const on = Number(b.dataset.uRpe) === st.rpe; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });
+      const d = root.querySelector('.u-rpe-desc');
+      d.textContent = rpeText(st.rpe);
+      d.classList.toggle('muted', !st.rpe);
       return;
     }
     if (t.hasAttribute('data-u-delete')) {

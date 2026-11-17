@@ -961,6 +961,12 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .u-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
 .u-rpe button { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
 .u-rpe button.is-on, .u-seg button.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.u-rpe-hint { margin: 0 0 6px; font-size: 12.5px; }
+.u-rpe-marks { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-top: 4px; font-size: 10.5px; color: var(--text-2); }
+.u-rpe-marks span { grid-row: 1; justify-self: center; white-space: nowrap; }
+.u-rpe-marks .m1 { justify-self: start; }
+.u-rpe-marks .m10 { justify-self: end; }
+.u-rpe-desc { margin: 8px 0 0; font-size: 13.5px; line-height: 1.4; min-height: 2.8em; }
 .modal-actions.u-three { grid-template-columns: 1fr 1fr 1fr; }
 .u-bottles { list-style: none; padding: 0; margin: 6px 0 0; flex: 1 1 100%; }
 .u-bottles li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--hair); }
