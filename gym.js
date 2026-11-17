@@ -129,7 +129,7 @@ function deleteGymSession(id) {
 /* ---------- Woche, nächster Split, Streak ---------- */
 const sessionsInWeek = (wk, list = getGymSessions()) => list.filter((s) => weekKey(parseDay(s.date)) === wk);
 /* Ausgesetzte Einheit: Eintrag mit skipped = true (z. B. Tag nach einem Wettkampf). Zählt nicht als Einheit,
-   senkt aber das Wochenziel dieser Woche um 1 (mindestens 1) und schiebt die Split-Reihenfolge weiter. */
+   senkt aber das Wochenziel dieser Woche um 1 (mindestens 1); der ausgesetzte Split gilt für diese Woche als dran gewesen. */
 const isSkip = (s) => !!s?.skipped;
 const SKIP_REASONS = { recovery: 'Wettkampf / Erholung', sick: 'Krank', travel: 'Reise', other: 'Sonstiges' };
 /** Einheiten, Aussetzer und Ziel einer Woche (Schlüssel = Montag). */
@@ -139,13 +139,18 @@ function weekCounts(wk, list = getGymSessions(), target = weeklyTarget()) {
   const skipped = all.length - done.length;
   return { all, done, n: done.length, skipped, target: Math.max(1, target - skipped) };
 }
-function nextSplit(list = getGymSessions()) {
+/**
+ * Nächster Split – pro Woche (Mo–So), Wunsch des Nutzers 17.11.2026: in der Reihenfolge der Splits aus gym-plans.json
+ * (Beine & Core → Brust, Schultern, Bizeps → Rücken & Trizeps) der erste, der diese Woche noch nicht gemacht oder
+ * ausgesetzt wurde. Verschobene Tage oder ein getauschter Split bringen so nichts durcheinander; jede Woche beginnt mit
+ * dem ersten Split. Sind alle schon dran gewesen (Zusatzeinheit), wieder der erste.
+ * Gleiche Regel in app-daten/training/push_send.py (gym_item) – bei Änderungen beide anpassen.
+ */
+function nextSplit(list = getGymSessions(), now = new Date()) {
   const splits = gymPlans()?.splits || [];
   if (!splits.length) return null;
-  const last = [...list].reverse().find((s) => splits.some((x) => x.id === s.splitId));
-  if (!last) return splits[0];
-  const i = splits.findIndex((x) => x.id === last.splitId);
-  return splits[(i + 1) % splits.length];
+  const taken = new Set(sessionsInWeek(weekKey(now), list).map((s) => s.splitId));
+  return splits.find((x) => !taken.has(x.id)) || splits[0];
 }
 /** Monat für den Joker: der Monat, in dem der Donnerstag der Woche liegt (ISO-Regel). */
 const jokerMonth = (monday) => { const th = addDays(monday, 3); return `${th.getFullYear()}-${pad2(th.getMonth() + 1)}`; };

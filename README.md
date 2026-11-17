@@ -97,8 +97,10 @@ Offline nutzt sie die zuletzt geladene Version.
 - **Gym:** Wochen (Mo–So) in Folge mit mindestens `weeklyTarget` Einheiten (abgehakt oder ausführlich). Die laufende Woche
   bleibt offen. Ein Joker pro Kalendermonat (Monat des Donnerstags der Woche) fängt eine verpasste Woche ab, die Streak
   bleibt dann stehen; die zweite verpasste Woche im selben Monat setzt sie auf 0. **Aussetzen** (z. B. Tag nach einem
-  Wettkampf): zählt nicht als Einheit, senkt aber das Wochenziel dieser Woche um 1 (mindestens 1) und schiebt die
-  Split-Reihenfolge weiter; lässt sich in „Letzte Einheiten“ zurücknehmen.
+  Wettkampf): zählt nicht als Einheit, senkt aber das Wochenziel dieser Woche um 1 (mindestens 1); der ausgesetzte Split
+  gilt für die Woche als dran gewesen; lässt sich in „Letzte Einheiten“ zurücknehmen.
+- **Nächster Split:** pro Woche (Mo–So) in der Reihenfolge aus `gym-plans.json` der erste, der diese Woche noch nicht gemacht
+  oder ausgesetzt wurde – jede Woche beginnt mit dem ersten Split; verschobene Tage oder ein getauschter Split stören nicht.
 - **Progression:** Haben beim letzten Mal alle Sätze das obere Ende der Wiederholungsspanne erreicht, zeigt die App
   „+`stepKg` kg probieren“ (bei Körpergewicht: mehr Wdh./Zusatzgewicht, bei Zeit: +5 s). Aufwärmsätze zählen nicht.
 
