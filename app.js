@@ -412,7 +412,7 @@ async function runSync() {
 const SHARED_SETTINGS_PATH = 'milon-settings.json';
 const sharedLocal = () => ({ app: 'milon-settings', version: 1,
   gymDays: Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays, gymDaysUpdatedAt: cfg.gymDaysUpdatedAt || '',
-  bottles: Array.isArray(cfg.bottles) ? cfg.bottles : [], bottlesUpdatedAt: cfg.bottlesUpdatedAt || '' });   // Flaschen: einheit.js
+  bottles: Array.isArray(cfg.bottles) ? cfg.bottles : [], bottlesUpdatedAt: cfg.bottlesUpdatedAt || '' });   // Flaschen: bis v40 (einheit.js), seit v41 ungenutzt – bleibt für ältere Geräte im Abgleich
 /** Je Teil (Gym-Tage, Flaschen) gewinnt die neueste Änderung. */
 function mergeShared(local, remote) {
   if (!remote || typeof remote !== 'object') return local;
@@ -1821,7 +1821,6 @@ function renderSettings() {
         <div class="set-text"><div class="set-label">Gym-Tage</div><div class="set-hint">Offene Ringe in Woche und Kalender, solange das Wochenziel offen ist. Gilt für alle Geräte${GHSync.getConfig() ? '' : ' (nach dem Verbinden)'}</div></div>
         <div class="day-chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-act="set-gymday" data-day="${d}" class="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d) ? 'is-on' : ''}" aria-pressed="${(Array.isArray(cfg.gymDays) ? cfg.gymDays : APP_DEFAULTS.gymDays).includes(d)}">${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d]}</button>`).join('')}</div>
       </div>
-      ${typeof bottlesSettingsHtml === 'function' ? bottlesSettingsHtml() : ''}
       <div class="set-row is-wrap">
         <div class="set-text"><div class="set-label">Darstellung der App</div><div class="set-hint">Heute, Training, Werte, Einstellungen. Automatisch = wie iPhone/iPad</div></div>
         <div class="seg" role="group" aria-label="Darstellung der App">${[['light', 'Hell'], ['dark', 'Dunkel'], ['auto', 'Automatisch']].map(([v, l]) => `<button data-act="set-apptheme" data-v="${v}" class="${(cfg.appTheme || 'light') === v ? 'is-on' : ''}" aria-pressed="${(cfg.appTheme || 'light') === v}">${l}</button>`).join('')}</div>

@@ -2,17 +2,20 @@
 
 /* =========================================================================
    Milon – Einheit erfassen (Wunsch des Nutzers 15.11.2026)
-   Antippen einer Einheit (Heute → Steht heute an, Ganze Auswertung) öffnet ein Fenster: Kohlenhydrate (Flaschen-Knöpfe,
-   Gummibärchen), Getränk, Verträglichkeit, „Wie lief’s?“, Belastungsempfinden 1–10 (optional).
+   Antippen einer Einheit (Heute → Steht heute an, Ganze Auswertung) öffnet ein Fenster: Kohlenhydrate (Scoop-Knöpfe für den
+   Carb-Mix mit Natrium, Gummibärchen), Getränk, Verträglichkeit, „Wie lief’s?“, Belastungsempfinden 1–10 (optional).
    Ablage: einheiten.json im Daten-Repository (Abgleich wie gym.json: pro Eintrag gewinnt das neueste updatedAt).
    Eintrag-ID: a-<Garmin-ID> (Aufzeichnung) oder p-<Datum>-<Plan-uid> (geplante Einheit, noch ohne Aufzeichnung).
    Die Auswertung (build_db.py) ordnet Plan-Einträge danach der Garmin-Aufzeichnung zu.
-   Flaschen: feste Flaschen aus den Einstellungen (milon-settings.json → bottles, für alle Geräte) + zuletzt benutzte Mengen.
+   Carb-Mix (Wunsch des Nutzers 18.11.2026, ersetzt die Flaschen-Knöpfe): Scoop-Größe, Kohlenhydrate und Natrium je Gramm Pulver
+   stehen nur im privaten Daten-Repository (verpflegung.json → mix, mit Quelle), nicht im Code. Milon lädt die Datei beim Abgleich.
    ========================================================================= */
 const UNIT_LOG_PATH = 'einheiten.json';
 const UNIT_KEYS = { entries: 'milon.units.entries.v1', deleted: 'milon.units.deleted.v1' };
 const GUMMY_CARBS_PER_100G = 77;   // Gummibärchen: 100 g Produkt ≈ 77 g Kohlenhydrate (Angabe des Nutzers 15.11.2026)
 const FLUID_STEPS = [250, 500, 750];   // Getränk-Knöpfe in ml (Angabe des Nutzers 15.11.2026)
+const MIX_PATH = 'verpflegung.json';
+const MIX_KEY = 'milon.units.mix.v1';
 const GUT_OPTIONS = [['gut', 'gut'], ['grenzwertig', 'grenzwertig'], ['probleme', 'Probleme']];
 /* Belastungsempfinden – feste Bedeutung jeder Zahl, damit alle Einheiten mit demselben Maßstab bewertet werden
    (Wunsch des Nutzers 17.11.2026). Grundlage: Borg-CR10-Skala in der Form von Foster et al. (2001, „Session-RPE“):
@@ -52,6 +55,7 @@ function mergeUnits(a, b) {
 const unitKey = (s) => JSON.stringify([(s?.entries || []).map((x) => `${x.id}@${x.updatedAt}`).sort(), [...(s?.deleted || [])].sort()]);
 /** Von runSync() (app.js) aufgerufen. true = lokal hat sich etwas geändert. */
 async function syncUnitLog() {
+  await loadMix();
   const before = unitKey(unitSnapshot());
   const res = await GHSync.syncFile(UNIT_LOG_PATH, {
     local: unitSnapshot(), merge: mergeUnits, equals: (x, y) => unitKey(x) === unitKey(y),
@@ -76,7 +80,7 @@ function unitEntryFor(it) {
   if (it.planUid) return list.find((e) => e.planUid === it.planUid && e.date === it.date) || null;
   return null;
 }
-const unitHasData = (e) => !!e && (e.carbs_g != null || e.fluid_ml != null || e.gut || (e.note || '').trim() || e.rpe != null);
+const unitHasData = (e) => !!e && (e.carbs_g != null || e.sodium_mg != null || e.fluid_ml != null || e.gut || (e.note || '').trim() || e.rpe != null);
 /** Knopf für eine Einheit (Zeilen in Heute und Auswertung). */
 function unitBtnHtml(it) {
   const e = unitEntryFor(it);
@@ -84,45 +88,29 @@ function unitBtnHtml(it) {
   return `<button class="btn btn-sm u-btn ${done ? 'is-done' : ''}" data-act="u-open" data-u="${esc(JSON.stringify(it))}" aria-label="${esc(`${it.title}: ${done ? 'Erfasstes ansehen' : 'Verpflegung und Notiz erfassen'}`)}">${done ? '✓ Erfasst' : 'Erfassen'}</button>`;
 }
 
-/* ---------- Flaschen ---------- */
-const getBottles = () => (Array.isArray(cfg.bottles) ? cfg.bottles.filter((b) => b && Number(b.g) > 0) : []);
-/** Zuletzt benutzte Mengen (Flaschen und freie Eingaben), ohne die festen Flaschen, höchstens 3. */
-function recentAmounts() {
-  const fixed = new Set(getBottles().map((b) => Number(b.g)));
-  const out = [];
-  const list = getUnitEntries().slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  for (const e of list) for (const p of (e.carbs_parts || []).slice().reverse()) {
-    const g = Number(p.g);
-    if ((p.kind === 'flasche' || p.kind === 'frei') && g > 0 && !fixed.has(g) && !out.includes(g)) out.push(g);
-    if (out.length >= 3) return out;
-  }
-  return out;
+/* ---------- Carb-Mix (Scoops) ---------- */
+function getMix() {
+  const m = store.get(MIX_KEY, null)?.mix;
+  return m && Number(m.scoop_g) > 0 && Number(m.carbs_per_g) > 0 ? m : null;
 }
-function bottlesSettingsHtml() {
-  const list = getBottles();
-  return `<div class="set-row is-wrap">
-    <div class="set-text"><div class="set-label">Flaschen</div><div class="set-hint">Schnellknöpfe beim Erfassen einer Einheit (Kohlenhydrate je Flasche). Gilt für alle Geräte${GHSync.getConfig() ? '' : ' (nach dem Verbinden)'}</div></div>
-    <ul class="u-bottles">${list.map((b, i) => `<li><span>${esc(b.label || 'Flasche')}</span><span class="m">${esc(String(b.g))} g</span><button class="icon-btn sm" data-act="u-bottle-del" data-i="${i}" aria-label="${esc(`${b.label || 'Flasche'} entfernen`)}">×</button></li>`).join('') || '<li class="muted small">Noch keine Flaschen.</li>'}</ul>
-    <div class="form-row u-bottle-add"><input id="u-b-label" type="text" placeholder="Name, z. B. Flasche" maxlength="30"><input id="u-b-g" type="number" inputmode="numeric" min="1" max="1000" placeholder="g KH"><button class="btn btn-sm" data-act="u-bottle-add">Hinzufügen</button></div>
-  </div>`;
+/** verpflegung.json aus dem Daten-Repository holen (in syncUnitLog); offline bleibt der letzte Stand. */
+async function loadMix() {
+  const c = GHSync.getConfig();
+  if (!c || navigator.onLine === false) return;
+  try {
+    const r = await GHSync.readFile(c, MIX_PATH);
+    if (r?.data?.mix) store.set(MIX_KEY, r.data);
+  } catch { /* Datei fehlt oder offline */ }
 }
-function saveBottles(list) {
-  saveSetting('bottles', list);
-  saveSetting('bottlesUpdatedAt', new Date().toISOString());   // milon-settings.json, neueste Änderung gewinnt
-  scheduleSync(1500);
+/** Kohlenhydrate und Natrium für eine Anzahl Scoops (gerundet). */
+function scoopValues(scoops, m = getMix()) {
+  const powder = scoops * Number(m.scoop_g);
+  return { g: Math.round(powder * Number(m.carbs_per_g)), na_mg: Math.round(powder * (Number(m.sodium_mg_per_g) || 0)) };
 }
-/** Aktionen aus den Einstellungen (data-act="u-…" im Seiteninhalt). */
+const fmtScoops = (x) => { const w = Math.floor(x + 1e-9); const h = x - w >= 0.25; return `${w || ''}${h ? '½' : ''}` || '0'; };
+/** Aktionen im Seiteninhalt (data-act="u-…"). */
 function handleUnitAction(act, el) {
   if (act === 'u-open') { try { openUnitSheet(JSON.parse(el.dataset.u)); } catch { /* defekte Daten am Knopf */ } return true; }
-  if (act === 'u-bottle-del') { const l = getBottles(); l.splice(Number(el.dataset.i), 1); saveBottles(l); renderSettings(); return true; }
-  if (act === 'u-bottle-add') {
-    const g = Math.round(Number(document.getElementById('u-b-g')?.value));
-    const label = (document.getElementById('u-b-label')?.value || '').trim() || 'Flasche';
-    if (!(g > 0 && g <= 1000)) { toast('Bitte Kohlenhydrate der Flasche in g eingeben (1–1000).'); return true; }
-    saveBottles([...getBottles(), { label, g }]);
-    renderSettings();
-    return true;
-  }
   return false;
 }
 
@@ -131,13 +119,18 @@ function openUnitSheet(it) {
   const old = unitEntryFor(it);
   const st = {
     carbs: old?.carbs_g ?? null, parts: Array.isArray(old?.carbs_parts) ? old.carbs_parts.slice() : [], manual: false,
-    fluid: old?.fluid_ml ?? null, gut: old?.gut || null, note: old?.note || '', rpe: old?.rpe ?? null,
+    fluid: old?.fluid_ml ?? null, gut: old?.gut || null, note: old?.note || '', rpe: old?.rpe ?? null, sodium: old?.sodium_mg ?? null,
   };
   const sportName = (typeof SPORT_NAME !== 'undefined' && SPORT_NAME[it.sport]) || 'Einheit';
-  const partsText = () => st.parts.map((p) => (p.kind === 'gummi' ? `Gummibärchen ${p.product_g} g (≈ ${p.g} g)` : `${p.label || (p.kind === 'frei' ? 'frei' : 'Flasche')} ${p.g} g`)).join(' + ')
-    + (st.manual ? ' · von Hand geändert' : '');
-  const amountBtn = (g, label) => `<button type="button" class="u-chip" data-u-carbs="${g}" data-u-label="${esc(label)}">${esc(label)} <span class="m">${g} g</span></button>`;
-  const recent = recentAmounts();
+  const mix = getMix();
+  const partText = (p) => {
+    if (p.kind === 'gummi') return `Gummibärchen ${p.product_g} g (≈ ${p.g} g)`;
+    if (p.kind === 'scoop') return `${fmtScoops(p.scoops)} Scoop${p.scoops > 1 ? 's' : ''} ${p.label || 'Carb-Mix'} (≈ ${p.g} g)`;
+    return `${p.label || (p.kind === 'frei' ? 'frei' : 'Flasche')} ${p.g} g`;
+  };
+  const partsText = () => st.parts.map(partText).join(' + ') + (st.manual ? ' · von Hand geändert' : '');
+  const sodiumText = () => (st.sodium != null ? `Natrium: ${st.sodium} mg` : '');
+  const scoopBtn = (n) => `<button type="button" class="u-chip" data-u-scoop="${n}">+${fmtScoops(n)} Scoop <span class="m">${scoopValues(n, mix).g} g</span></button>`;
   modalRoot.innerHTML = `<div class="modal-backdrop u-backdrop">
     <form class="modal u-sheet" role="dialog" aria-modal="true" aria-labelledby="u-title" novalidate>
       <div class="u-head"><div><div class="k">${esc(sportName)} · ${esc(dateShort(it.date))}</div><h2 id="u-title">${esc(it.title || sportName)}</h2></div>
@@ -145,10 +138,11 @@ function openUnitSheet(it) {
       <fieldset class="u-field"><legend class="k">Kohlenhydrate</legend>
         <div class="u-inrow"><input id="u-carbs" type="number" inputmode="numeric" min="0" max="2000" placeholder="0" value="${st.carbs ?? ''}"><span class="u-unit">g</span>
           <button type="button" class="btn btn-ghost btn-sm" data-u-carbs-reset ${st.carbs == null ? 'hidden' : ''}>Leeren</button></div>
-        <div class="u-chips">${getBottles().map((b) => amountBtn(b.g, b.label || 'Flasche')).join('')}${recent.map((g) => amountBtn(g, 'zuletzt')).join('')}
-          ${!getBottles().length ? '<span class="small muted">Flaschen legst du in den Einstellungen an.</span>' : ''}</div>
+        <div class="u-chips">${mix ? `<span class="small u-mixname">${esc(mix.name || 'Carb-Mix')}</span>${scoopBtn(1)}${scoopBtn(0.5)}`
+          : '<span class="small muted">Scoop-Knöpfe erscheinen nach dem nächsten Abgleich (Carb-Mix aus dem Daten-Repository).</span>'}</div>
         <div class="u-inrow u-gummy"><span class="small">Gummibärchen</span><input id="u-gummy" type="number" inputmode="numeric" min="0" max="1000" placeholder="g Produkt"><button type="button" class="btn btn-sm" data-u-gummy>+ hinzufügen</button></div>
         <p class="small muted u-parts" id="u-parts">${esc(partsText())}</p>
+        <p class="small u-sodium" id="u-sodium">${esc(sodiumText())}</p>
       </fieldset>
       <fieldset class="u-field"><legend class="k">Getränk</legend>
         <div class="u-inrow"><input id="u-fluid" type="number" inputmode="numeric" min="0" max="10000" step="50" placeholder="0" value="${st.fluid ?? ''}"><span class="u-unit">ml</span>
@@ -181,9 +175,21 @@ function openUnitSheet(it) {
   const syncCarbs = () => {
     $('u-carbs').value = st.carbs ?? '';
     $('u-parts').textContent = partsText();
-    root.querySelector('[data-u-carbs-reset]').hidden = st.carbs == null;
+    $('u-sodium').textContent = sodiumText();
+    root.querySelector('[data-u-carbs-reset]').hidden = st.carbs == null && st.sodium == null;
   };
   const addCarbs = (part) => { st.parts.push(part); st.carbs = (Number(st.carbs) || 0) + part.g; syncCarbs(); };
+  /** Scoops sammeln sich in einem Teil (1 + ½ = 1½ Scoops), Kohlenhydrate und Natrium aus der Summe neu gerechnet. */
+  const addScoops = (n) => {
+    let p = st.parts.find((x) => x.kind === 'scoop');
+    const prev = p ? { g: p.g, na_mg: p.na_mg || 0 } : { g: 0, na_mg: 0 };
+    if (!p) { p = { kind: 'scoop', scoops: 0, label: mix.name || 'Carb-Mix', mix: mix.id || null }; st.parts.push(p); }
+    p.scoops += n;
+    Object.assign(p, scoopValues(p.scoops, mix));
+    st.carbs = (Number(st.carbs) || 0) + p.g - prev.g;
+    st.sodium = (Number(st.sodium) || 0) + p.na_mg - prev.na_mg;
+    syncCarbs();
+  };
   $('u-carbs').addEventListener('input', (e) => {
     const v = e.target.value === '' ? null : Math.max(0, Math.round(Number(e.target.value)));
     st.carbs = Number.isFinite(v) ? v : null;
@@ -197,8 +203,8 @@ function openUnitSheet(it) {
     const t = e.target.closest('button');
     if (!t) return;
     if (t.hasAttribute('data-u-close')) { close(); return; }
-    if (t.dataset.uCarbs) { const g = Number(t.dataset.uCarbs); addCarbs({ kind: t.dataset.uLabel === 'zuletzt' ? 'frei' : 'flasche', g, label: t.dataset.uLabel === 'zuletzt' ? undefined : t.dataset.uLabel }); return; }
-    if (t.hasAttribute('data-u-carbs-reset')) { st.carbs = null; st.parts = []; st.manual = false; syncCarbs(); return; }
+    if (t.dataset.uScoop && mix) { addScoops(Number(t.dataset.uScoop)); return; }
+    if (t.hasAttribute('data-u-carbs-reset')) { st.carbs = null; st.sodium = null; st.parts = []; st.manual = false; syncCarbs(); return; }
     if (t.hasAttribute('data-u-gummy')) {
       const pg = Math.round(Number($('u-gummy').value));
       if (!(pg > 0 && pg <= 1000)) { $('u-gummy').focus(); toast('Gummibärchen: Produktmenge in g eingeben.'); return; }
@@ -237,7 +243,7 @@ function openUnitSheet(it) {
     const entry = {
       id: old?.id || unitIds(it)[0], date: it.date, sport: it.sport, title: it.title || '',
       activityId: it.activityId ? String(it.activityId) : (old?.activityId || null), planUid: it.planUid || old?.planUid || null,
-      carbs_g: st.carbs, carbs_parts: st.parts, fluid_ml: st.fluid, gut: st.gut, note: st.note.trim(), rpe: st.rpe,
+      carbs_g: st.carbs, carbs_parts: st.parts, sodium_mg: st.sodium, fluid_ml: st.fluid, gut: st.gut, note: st.note.trim(), rpe: st.rpe,
       createdAt: old?.createdAt || now, updatedAt: now,
     };
     if (!entry.id) { toast('Diese Einheit lässt sich noch nicht zuordnen.'); return; }
