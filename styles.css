@@ -964,6 +964,17 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .u-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
 .u-rpe button { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
 .u-rpe button.is-on, .u-seg button.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.q-splits { flex-wrap: wrap; margin: 10px 0; }
+.q-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+.q-row label, .q-note { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.q-row input[type=number] { width: 72px; }
+.q-note { margin: 8px 0 12px; }
+.q-note input { flex: 1; min-width: 0; }
+.hist-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ax-modal #ax-q { width: 100%; margin: 6px 0 8px; }
+.ax-list { list-style: none; margin: 0; padding: 0; max-height: 50dvh; overflow-y: auto; }
+.ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
+  background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 .u-rpe-hint { margin: 0 0 6px; font-size: 12.5px; }
 .u-rpe-marks { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-top: 4px; font-size: 10.5px; color: var(--text-2); }
 .u-rpe-marks span { grid-row: 1; justify-self: center; white-space: nowrap; }

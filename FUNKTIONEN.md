@@ -21,6 +21,8 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ✓ Gym-Streak (Wochen, Joker pro Monat) – als Kachel auf Training und 12-Wochen-Raster
 - [x] ◐ Splits, nächster Split, letzte Einheiten (bearbeiten, löschen)
 - [x] ◐ Übungen mit Verlauf und Progressionshinweis „Mehr Gewicht probieren“, Übungsseite
+- [x] ◐ Abhaken = „Gym ohne Erfassen“ (v42): Split, Datum, Dauer (Standard 60 min), Notiz – z. B. mit Kumpels; in „Letzte Einheiten“ wieder änderbar, „Sätze nachtragen“ öffnet das Bearbeiten
+- [x] ◐ „+ Übung hinzufügen“ (v42) beim Erfassen und Bearbeiten: Übungen anderer Splits (gemeinsamer Verlauf) oder eigene Übung (ID `eigen-…`)
 - [x] ◐ Erfassen: Vorbelegung, Entwurf, Haken mit Uhrzeit, Satz hinzufügen/entfernen, Fokus „Jetzt dran“, Leiste „Noch x von y Sätzen“, Pausenbalken
 - [x] ◐ Erste Eingabe ersetzt die alte Zahl (iOS), Wake Lock beim Erfassen, Entwurf beim Sperren des Bildschirms
 - [x] ◐ Abschluss-Übersicht
