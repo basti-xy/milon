@@ -243,7 +243,7 @@ function todoHtml(d, s, a, now) {
       <span class="sdot s-${esc(it.sport)}" aria-hidden="true"></span>
       <div class="h-row-main">${it.desc ? `<details><summary><div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${[it.min ? `${fmtHM(it.min / 60)} h` : '', it.time && it.time !== '00:00' ? it.time : '', 'aus dem Plan · Details'].filter(Boolean).join(' · ')}</div></summary><p class="h-row-desc">${esc(it.desc)}</p></details>`
         : `<div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${it.min ? `${fmtHM(it.min / 60)} h · ` : ''}aus dem Plan</div>`}</div>
-      ${ubtn}
+      ${typeof klPlanLinkHtml === 'function' ? klPlanLinkHtml(it) : ''}${ubtn}
     </div>`);
   }
   // 1b. Erledigte Garmin-Einheiten ohne Plan-Eintrag (zum Erfassen von Verpflegung und Notiz)
@@ -602,6 +602,7 @@ function renderTraining() {
       </section>` : ''}
     </div>
     ${typeof statsTileHtml === 'function' ? statsTileHtml() : ''}
+    ${typeof klTileHtml === 'function' ? klTileHtml() : ''}
     <div class="tr-cols">
       <div>
         <h2 class="section-title">Gym</h2>

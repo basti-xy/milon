@@ -57,6 +57,7 @@ const unitKey = (s) => JSON.stringify([(s?.entries || []).map((x) => `${x.id}@${
 async function syncUnitLog() {
   await loadMix();
   if (typeof loadKleidung === 'function') await loadKleidung();   // kleidung.js: Modell + Wetter je Einheit
+  if (typeof syncKleidungRegeln === 'function') { try { await syncKleidungRegeln(); } catch { sync.again = true; } }   // kleidung-seite.js
   const before = unitKey(unitSnapshot());
   const res = await GHSync.syncFile(UNIT_LOG_PATH, {
     local: unitSnapshot(), merge: mergeUnits, equals: (x, y) => unitKey(x) === unitKey(y),
