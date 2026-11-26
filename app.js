@@ -1166,6 +1166,9 @@ function route({ keepScroll = false } = {}) {
     case 'statistik':
       renderStatistik(); // statistik.js
       return;
+    case 'kleidung':
+      renderKleidung(r.arg, r.arg2); // kleidung-seite.js
+      return;
     case 'werte':
       renderWerte();
       return;

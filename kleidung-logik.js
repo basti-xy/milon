@@ -84,4 +84,82 @@ function klStufe(sport, kt, m) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { KL_SPORT, klWindStufe, klNaesse, klLicht, klDauer, klIntensitaet, klKleidungsTemp, klStufe };
+/* ---------- Empfehlung: Eigene Regel > Erprobt > Vorschlag (Reihenfolge aus modell.vorrang) ---------- */
+const klRuleId = (sport, idx, cat) => `${sport}-${idx}-${cat}`;
+/** Stufe einer gespeicherten Einheit (Kleidung c) oder null. */
+function klUnitStufe(c, m) {
+  const r = klKleidungsTemp(c, m);
+  return r ? { kt: r.kt, ...klStufe(c.sport, r.kt, m) } : null;
+}
+/**
+ * „Erprobt“ nach modell.erprobtLogik: alle Einheiten derselben Sportart in derselben Stufe mit Eintrag in der Kategorie.
+ * Gleiche Teile (ohne Groß-/Kleinschreibung) zusammenfassen, neueste Bewertung zählt, Anzahl zählen.
+ * ok = passt/ohne Bewertung (Optionen), off = zu kalt/zu warm (markiert darunter);
+ * tipp, wenn nur off: Vorschlag der kälteren (zu kalt) bzw. wärmeren (zu warm) Stufe, bei „etwas …“ derselben Stufe.
+ * units = [{ date, title, clothing }]
+ */
+function klErprobt(sport, idx, cat, units, m, vorschlaege) {
+  const area = (m.kategorien[sport] || []).find((c) => c.key === cat)?.koerperbereich || null;
+  const groups = new Map();
+  for (const u of [...units].sort((a, b) => String(a.date).localeCompare(String(b.date)))) {
+    const c = u.clothing;
+    if (!c || c.sport !== sport) continue;
+    const items = (c.clothes?.[cat] || []).map((x) => String(x).trim()).filter(Boolean);
+    if (!items.length || klUnitStufe(c, m)?.idx !== idx) continue;
+    const key = items.map((x) => x.toLowerCase()).sort().join(' + ');
+    const g = groups.get(key) || { text: '', count: 0, rating: null, date: '' };
+    g.count += 1;
+    g.date = u.date; g.text = items.join(' + '); g.rating = area ? (c.ratings?.[area] || null) : null;   // neueste zählt
+    groups.set(key, g);
+  }
+  const all = [...groups.values()].sort((a, b) => b.count - a.count || b.date.localeCompare(a.date));
+  const ok = all.filter((g) => !g.rating || g.rating === 'passt');
+  const off = all.filter((g) => g.rating && g.rating !== 'passt');
+  let tipp = null;
+  if (!ok.length && off.length) {
+    const last = [...off].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const n = m.stufen[sport].labels.length;
+    const shift = last.rating === 'zu kalt' ? 1 : last.rating === 'zu warm' ? -1 : 0;   // idx 0 = wärmste Stufe
+    const ti = Math.max(0, Math.min(n - 1, idx + shift));
+    tipp = { rating: last.rating, idx: ti, label: m.stufen[sport].labels[ti], text: vorschlaege?.[sport]?.[cat]?.[ti] ?? null };
+  }
+  return { ok, off, tipp };
+}
+/** Empfehlung je Kategorie: { cat, name, src: 'eigeneRegel'|'erprobt'|'vorschlag', text, options, off, tipp } */
+function klEmpfehlung(sport, idx, units, rules, m, vorschlaege) {
+  return (m.kategorien[sport] || []).map((c) => {
+    const rule = (rules || []).find((r) => r.id === klRuleId(sport, idx, c.key) && String(r.text || '').trim());
+    const e = klErprobt(sport, idx, c.key, units, m, vorschlaege);
+    const vor = vorschlaege?.[sport]?.[c.key]?.[idx] ?? '–';
+    const cand = { eigeneRegel: rule ? { text: rule.text } : null, erprobt: e.ok.length ? { text: e.ok[0].text } : null, vorschlag: { text: vor } };
+    const src = (m.vorrang || ['eigeneRegel', 'erprobt', 'vorschlag']).find((k) => cand[k]) || 'vorschlag';
+    return { cat: c.key, name: c.name, src, text: cand[src].text, options: e.ok, off: e.off, tipp: src === 'vorschlag' ? e.tipp : null, vorschlag: vor };
+  });
+}
+/** Ähnliche Einheiten: gleiche Sportart, Kleidungs-Temperatur höchstens modell.aehnlichBisGrad entfernt; nächste zuerst. */
+function klAehnlich(sport, kt, units, m, max = 5) {
+  const lim = m.aehnlichBisGrad ?? 2;
+  return units.filter((u) => u.clothing?.sport === sport)
+    .map((u) => ({ u, s: klUnitStufe(u.clothing, m) }))
+    .filter((x) => x.s && Math.abs(x.s.kt - kt) <= lim)
+    .sort((a, b) => Math.abs(a.s.kt - kt) - Math.abs(b.s.kt - kt) || String(b.u.date).localeCompare(String(a.u.date)))
+    .slice(0, max);
+}
+/** Hinweise (Regen, Dunkelheit, Intervalle, Glätte, lange Einheiten) – Texte aus modell.hinweise. */
+function klHinweise(c, m) {
+  const h = m.hinweise;
+  if (!h) return [];
+  const out = [];
+  const t = c.temp == null || c.temp === '' ? null : Number(c.temp);
+  if (c.wet === 'regen') out.push(['regen', h.texte.regen]);
+  if (c.light === 'dunkel') out.push(['dunkel', h.texte.dunkel]);
+  if (c.intensity === 'intervalle') out.push(['intervalle', h.texte.intervalle]);
+  if (t != null && ((t <= h.glaetteBisTemp && c.wet && c.wet !== 'trocken') || t <= 0)) out.push(['glaette', h.texte.glaette]);
+  if ((h.langeDauer?.[c.sport] || []).includes(c.duration)) out.push(['lang', h.texte.lang]);
+  return out.filter((x) => x[1]);
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { KL_SPORT, klWindStufe, klNaesse, klLicht, klDauer, klIntensitaet, klKleidungsTemp, klStufe,
+    klRuleId, klUnitStufe, klErprobt, klEmpfehlung, klAehnlich, klHinweise };
+}

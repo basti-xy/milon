@@ -42,6 +42,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ✓ Einschätzung (Ampel), Letzte Woche mit ✓ / ✗ / →, Link Ganze Auswertung
 - [x] ✓ Steht heute an: Plan-Einheiten (Details aufklappbar), Gym an den Gym-Tagen, Dehnen – direkt startbar
 - [x] ◐ Kleidung (v43): Abschnitt im Fenster „Einheit erfassen“ bei Rad/Laufen draußen – Wetter, Intensität und Dauer vorbelegt (Open-Meteo, Pulszonen, Garmin-Dauer), Stufen editierbar, Kleidung je Kategorie als Chips mit Autovervollständigung, Bewertung je Körperbereich, Notiz; Kleidungs-Temperatur und Stufe live
+- [x] ◐ „Was ziehe ich an?“ (v44, `#/kleidung`): Rechner (Sport, Temperatur, Intensität, Dauer, Wind, Nässe, Licht, Abfahrten, persönlicher Ausgleich) → Kleidungs-Temperatur, Stufe, Empfehlung je Kategorie (Eigene Regel / Erprobt / Vorschlag, Varianten, „zu kalt/zu warm“ markiert, Tipp), ähnliche Einheiten, Hinweise; Tabelle je Sportart mit eigenen Regeln; Vorhersage für Plan-Einheiten (Link „Kleidung“ in Heute)
 - [x] ✓ Einheit erfassen (v38): Knopf an Plan- und Garmin-Einheiten (Heute) und unter „Einheiten der Woche“ (Auswertung) → Fenster mit
   Kohlenhydraten (v41: Knöpfe +1 / +½ Scoop Carb-Mix → Kohlenhydrate und Natrium, Werte aus dem Daten-Repository; Gummibärchen-Umrechnung; freie Eingabe), Getränk (+250/+500/+750), Verträglichkeit,
   „Wie lief’s?“, Belastungsempfinden 1–10 (feste Bedeutung je Zahl, v40: Kurzwörter unter 1/3/5/7/10, nach dem Antippen der ganze Text); „✓ Erfasst“ am Knopf, Bearbeiten und Löschen

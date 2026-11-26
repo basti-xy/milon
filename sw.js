@@ -1,6 +1,6 @@
 // Service Worker: Network-first, damit Updates sofort ankommen – offline wird aus dem Cache geliefert.
 // Die Routinen liegen nicht hier, sondern privat bei GitHub (die App speichert sie selbst zwischen).
-const CACHE = 'milon-v43';
+const CACHE = 'milon-v44';
 const ASSETS = [
   './',
   'index.html',
@@ -15,6 +15,7 @@ const ASSETS = [
   'statistik.js',
   'kleidung-logik.js',
   'kleidung.js',
+  'kleidung-seite.js',
   'einheit.js',
   'fonts/newsreader-latin-400-normal.woff2',
   'fonts/newsreader-latin-500-normal.woff2',

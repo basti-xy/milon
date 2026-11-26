@@ -975,6 +975,33 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ax-list { list-style: none; margin: 0; padding: 0; max-height: 50dvh; overflow-y: auto; }
 .ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+/* Was ziehe ich an? (kleidung-seite.js) */
+.kl-tabs { margin: 0 0 12px; }
+.kl-calc { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.kl-plan-note { margin: 0 0 8px; }
+.kl-step { display: flex; align-items: center; gap: 12px; }
+.kl-out-head .kl-big { font-family: var(--serif); font-size: 40px; line-height: 1.1; font-variant-numeric: lining-nums tabular-nums; }
+#klp-out .card { margin-bottom: 12px; }
+.kl-recs { display: flex; flex-direction: column; }
+.kl-rec { padding: 8px 0; border-bottom: 1px solid var(--hair); }
+.kl-rec:last-child { border-bottom: 0; }
+.kl-badge { display: inline-block; font-size: 10.5px; letter-spacing: .04em; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--text-2); vertical-align: 1px; }
+.kl-badge.b-eigeneRegel { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.kl-badge.b-erprobt { border-color: var(--good); color: var(--good); }
+.kl-off { color: var(--text-2); }
+.kl-cold { color: var(--sport-swim); }
+.kl-warm { color: var(--bad); }
+.kl-tipp { margin-top: 2px; }
+.kl-hints { margin: 6px 0 0; padding-left: 18px; }
+.kl-sim { border-bottom: 1px solid var(--hair); padding: 6px 0; }
+.kl-sim summary { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; }
+.kl-sim ul { margin: 6px 0; padding-left: 18px; }
+.kl-stufe { margin-bottom: 10px; }
+.kl-stufe.is-current { border-color: var(--ink); }
+.kl-cell { display: grid; grid-template-columns: 120px 1fr; gap: 8px; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--hair);
+  padding: 8px 0; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; min-height: 44px; }
+.kl-cell:last-child { border-bottom: 0; }
+.kl-plan-link { margin-right: 6px; }
 /* Kleidung (kleidung.js) */
 .kl > summary { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; min-height: 32px; }
 .kl > summary::-webkit-details-marker { display: none; }
