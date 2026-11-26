@@ -51,6 +51,21 @@ function repsRange(r) {
   return n ? [Number(n[1]), Number(n[1])] : null;
 }
 const exUnit = (ex) => (ex?.unit === 's' ? 's' : 'reps');
+/* Zusätzliche Übungen in einer Einheit (Wunsch des Nutzers 26.11.2026): Übungen aus anderen Splits behalten ihre ID
+   (gemeinsamer Verlauf), eigene Übungen bekommen die ID eigen-<name>. */
+const ownExId = (name) => `eigen-${String(name).trim().toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '')}`;
+/** Eigene Übungen aus dem Verlauf: [{ id, name }], neueste zuerst. */
+function ownExercises(list = getGymSessions()) {
+  const seen = new Map();
+  for (const s of [...list].reverse()) for (const e of s.exercises || []) {
+    if (String(e.exerciseId).startsWith('eigen-') && !seen.has(e.exerciseId)) seen.set(e.exerciseId, { id: e.exerciseId, name: e.name });
+  }
+  return [...seen.values()];
+}
+/** Übung für das Erfassen: aus dem Plan (irgendein Split) oder eine eigene Übung ohne Ziel. */
+function exForLog(id, name = '') {
+  return planExercise(id) || { id, name: name || ownExercises().find((x) => x.id === id)?.name || id, own: true };
+}
 const isTracked = (ex) => ex && ex.block !== 'warmup'; // Aufwärmsätze zählen nicht für Bestwerte/Progression
 function planKgForSet(ex, i) {
   if (Array.isArray(ex.kg)) return ex.kg[Math.min(i, ex.kg.length - 1)] ?? null;
@@ -402,8 +417,10 @@ function gymSectionsHtml(now = new Date()) {
         ${isSkip(s) ? `<span class="hist-name">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
           <span class="muted small">ausgesetzt${s.reason && SKIP_REASONS[s.reason] ? ` · ${esc(SKIP_REASONS[s.reason])}` : ''}</span></span>
           <button class="btn btn-ghost btn-sm" data-act="gym-unskip" data-id="${esc(s.id)}">Zurücknehmen</button>`
+        : s.quick ? `<button class="hist-name hist-btn" data-act="gym-quick-edit" data-id="${esc(s.id)}">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
+          <span class="muted small">ohne Sätze${s.durationMin ? ` · ${s.durationMin} min` : ''}${s.note ? ` · ${esc(s.note)}` : ''}</span></button>`
         : `<a class="hist-name" href="#/gym/edit/${encodeURIComponent(s.id)}">${esc(splitById(s.splitId)?.name || s.splitName || s.splitId)}
-          <span class="muted small">${s.quick ? 'abgehakt' : `${(s.exercises || []).length} Übungen`}${s.durationMin ? ` · ${s.durationMin} min` : ''}</span></a>`}
+          <span class="muted small">${(s.exercises || []).length} Übungen${s.durationMin ? ` · ${s.durationMin} min` : ''}</span></a>`}
       </li>`).join('')}</ul>
     </section>` : ''}
     <section class="section">
@@ -440,6 +457,7 @@ function repTarget(ex) {
 /** Vorbelegung: Gewicht vom letzten Mal (sonst aus dem Plan), Wiederholungen immer das Ziel aus dem Plan. */
 function prefillSets(ex) {
   const st = exerciseStats(ex.id);
+  if (ex.own) return (st?.last.sets.length ? st.last.sets : [{}]).map((x) => ({ kg: x.kg ?? '', reps: x.reps ?? '', done: false }));
   const n = Math.max(1, ex.sets || 1);
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -456,7 +474,7 @@ function newDraft(splitId) {
   const sp = splitById(splitId);
   const exercises = {};
   for (const ex of sp.exercises) exercises[ex.id] = { sets: prefillSets(ex) };
-  return { splitId, sessionId: null, date: todayKey(), startedAt: Date.now(), durationMin: null, note: '', exercises, showMore: false };
+  return { splitId, sessionId: null, date: todayKey(), startedAt: Date.now(), durationMin: null, note: '', exercises, showMore: false, added: [] };
 }
 function draftFromSession(s) {
   const sp = splitById(s.splitId);
@@ -465,7 +483,14 @@ function draftFromSession(s) {
     const logged = (s.exercises || []).find((e) => e.exerciseId === ex.id);
     exercises[ex.id] = { sets: logged ? logged.sets.map((x) => ({ kg: x.kg ?? '', reps: x.reps ?? '', done: true, at: x.at ? Date.parse(x.at) || null : null })) : prefillSets(ex) };
   }
-  return { splitId: s.splitId, sessionId: s.id, date: s.date, startedAt: null, durationMin: s.durationMin ?? null, note: s.note || '', exercises, showMore: false, quick: !!s.quick, createdAt: s.createdAt };
+  // Übungen außerhalb des Splits (andere Splits, eigene Übungen)
+  const added = [];
+  for (const e of s.exercises || []) {
+    if (sp?.exercises.some((x) => x.id === e.exerciseId)) continue;
+    added.push({ id: e.exerciseId, name: e.name });
+    exercises[e.exerciseId] = { sets: (e.sets || []).map((x) => ({ kg: x.kg ?? '', reps: x.reps ?? '', done: true, at: x.at ? Date.parse(x.at) || null : null })) };
+  }
+  return { splitId: s.splitId, sessionId: s.id, date: s.date, startedAt: null, durationMin: s.durationMin ?? null, note: s.note || '', exercises, showMore: false, quick: !!s.quick, createdAt: s.createdAt, added };
 }
 /* Begonnene Einheiten pro Split zwischenspeichern – App schließen, Bildschirm sperren: nichts geht verloren */
 let gymDraft = null;
@@ -541,7 +566,7 @@ let gymFocusId = null;
 function setsLeft() {
   const d = gymDraft;
   let total = 0, done = 0;
-  for (const ex of splitById(d.splitId)?.exercises || []) {
+  for (const ex of [...(splitById(d.splitId)?.exercises || []), ...(d.added || []).map((a) => exForLog(a.id, a.name))]) {
     const sets = d.exercises[ex.id]?.sets || [];
     const n = sets.filter((s) => s.done).length;
     if (COLLAPSED_BLOCKS.includes(ex.block) && !n) continue;
@@ -568,7 +593,7 @@ function updateRestBar() {
   const times = draftSetTimes();
   const last = times[times.length - 1];
   const sec = last ? Math.max(0, (Date.now() - last.at) / 1000) : 0;
-  const restSec = last ? Number(splitById(gymDraft.splitId)?.exercises.find((e) => e.id === last.exId)?.restSec) || 0 : 0;
+  const restSec = last ? Number((splitById(gymDraft.splitId)?.exercises.find((e) => e.id === last.exId) || planExercise(last.exId))?.restSec) || 0 : 0;
   const ready = restSec > 0 && sec >= restSec;
   put('gl-rest-label', last ? 'Letzter Satz vor ' : 'Haken bei einem Satz startet die Pausenuhr');
   put('gl-rest-since', last ? fmtElapsed(sec) : '');
@@ -609,6 +634,8 @@ function drawGymLog() {
       ${g.items.map(exerciseLogHtml).join('')}
     </section>`).join('')}
     ${hiddenCount && !d.showMore ? `<button class="btn btn-ghost gl-more" data-act="gym-more">Optional und Ersatz anzeigen (${hiddenCount})</button>` : ''}
+    ${(d.added || []).length ? `<section class="gl-group"><div class="gl-block">Weitere Übungen</div>${d.added.map((a) => exerciseLogHtml(exForLog(a.id, a.name))).join('')}</section>` : ''}
+    <button class="btn btn-ghost gl-more" data-act="gym-add-ex">+ Übung hinzufügen</button>
     <label class="gl-note">Notiz<textarea data-gym-field="note" rows="2" placeholder="z. B. wie es lief, Technik, Gefühl">${esc(d.note)}</textarea></label>
     ${d.sessionId ? `<button class="btn btn-ghost gl-delete" data-act="gym-delete">${ICONS.trash}<span>Einheit löschen</span></button>` : ''}
     <div class="start-bar">
@@ -631,7 +658,7 @@ function exerciseLogHtml(ex) {
       <div>
         ${isFocus ? '<div class="gl-now">Jetzt dran</div>' : ''}
         <div class="gl-ex-name">${complete ? `${ICONS.check} ` : ''}${esc(ex.name)}</div>
-        <div class="gl-target"><span class="gl-target-k">Ziel</span>${esc(planTarget(ex))}${exUnit(ex) === 's' ? '' : ' <span>Wdh.</span>'}${ex.perSide ? ' <span>pro Seite</span>' : ''}</div>
+        ${ex.own ? '<div class="small muted">Eigene Übung</div>' : `<div class="gl-target"><span class="gl-target-k">Ziel</span>${esc(planTarget(ex))}${exUnit(ex) === 's' ? '' : ' <span>Wdh.</span>'}${ex.perSide ? ' <span>pro Seite</span>' : ''}</div>`}
         <div class="small muted">${[ex.bodyweight ? 'Körpergewicht' : '', ex.kgTarget ? `Ziel ${fmtKg(ex.kgTarget)} kg` : '', ex.restSec ? `Pause ${Math.floor(ex.restSec / 60)}:${pad2(ex.restSec % 60)}` : ''].filter(Boolean).map(esc).join(' · ')}</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-act="gym-all-done" data-ex="${esc(ex.id)}">Alle ✓</button>
@@ -650,6 +677,7 @@ function exerciseLogHtml(ex) {
       <div class="gl-set-btns">
         <button class="btn btn-ghost btn-sm" data-act="gym-add-set" data-ex="${esc(ex.id)}">+ Satz</button>
         ${sets.length > 1 ? `<button class="btn btn-ghost btn-sm" data-act="gym-del-set" data-ex="${esc(ex.id)}">− Satz</button>` : ''}
+        ${(gymDraft.added || []).some((a) => a.id === ex.id) ? `<button class="btn btn-ghost btn-sm" data-act="gym-remove-ex" data-ex="${esc(ex.id)}">Entfernen</button>` : ''}
       </div>
     </div>
   </article>`;
@@ -702,15 +730,37 @@ async function handleGymAction(act, el) {
   const exId = el.dataset.ex;
   const ex = gymDraft?.exercises[exId];
   switch (act) {
-    case 'gym-quick': {
-      const sp = splitById(el.dataset.split);
+    case 'gym-quick': case 'gym-quick-edit': {
+      const old = act === 'gym-quick-edit' ? getGymSessions().find((x) => x.id === el.dataset.id) : null;
+      const sp = splitById(old ? old.splitId : el.dataset.split);
       if (!sp) return;
-      const ok = await confirmModal({ title: 'Gym erledigt?', text: `${sp.name} – heute, ${fmtDate(todayKey())}`, ok: 'Abhaken', cancel: 'Abbrechen' });
-      if (!ok) return;
+      const r = await quickModal(sp, old);
+      if (!r) return;
+      if (r.edit) { location.hash = `#/gym/edit/${encodeURIComponent(old.id)}`; return; }
       const now = new Date().toISOString();
-      saveGymSession({ id: genId(), date: todayKey(), splitId: sp.id, splitName: sp.name, quick: true, durationMin: null, note: '', exercises: [], createdAt: now, updatedAt: now });
-      toast(`Abgehakt: ${sp.name}`);
+      const nsp = splitById(r.splitId) || sp;
+      saveGymSession({ ...(old || {}), id: old?.id || genId(), date: r.date, splitId: nsp.id, splitName: nsp.name, quick: true, durationMin: r.durationMin,
+        note: r.note, exercises: old?.exercises || [], createdAt: old?.createdAt || now, updatedAt: now });
+      toast(`${old ? 'Gespeichert' : 'Abgehakt'}: ${nsp.name}${r.durationMin ? ` · ${r.durationMin} min` : ''}`);
       rerenderCurrent();
+      break;
+    }
+    case 'gym-add-ex': {
+      const pick = await addExerciseModal();
+      if (!pick || !gymDraft) return;
+      if (splitById(gymDraft.splitId)?.exercises.some((x) => x.id === pick.id)) { toast('Die Übung steht schon in diesem Split.'); return; }
+      if (!(gymDraft.added ||= []).some((a) => a.id === pick.id)) {
+        gymDraft.added.push(pick);
+        gymDraft.exercises[pick.id] = { sets: prefillSets(exForLog(pick.id, pick.name)) };
+      }
+      saveDraft(); drawGymLogKeepScroll();
+      app.querySelector(`.gl-ex[data-ex="${CSS.escape(pick.id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      break;
+    }
+    case 'gym-remove-ex': {
+      gymDraft.added = (gymDraft.added || []).filter((a) => a.id !== exId);
+      delete gymDraft.exercises[exId];
+      saveDraft(); drawGymLogKeepScroll();
       break;
     }
     case 'gym-skip': {
@@ -769,6 +819,105 @@ function scrollToFocus() {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+/**
+ * Gym ohne Erfassen (Wunsch des Nutzers 26.11.2026: mit Kumpels trainieren, am Ende nur „1 h Rücken & Trizeps“ eintragen).
+ * Split, Datum, Dauer, Notiz. Gibt { splitId, date, durationMin, note } zurück, { edit: true } für „Sätze nachtragen“ oder null.
+ */
+function quickModal(sp, old = null) {
+  const splits = gymPlans()?.splits || [];
+  let splitId = sp.id;
+  return new Promise((resolve) => {
+    modalRoot.innerHTML = `<div class="modal-backdrop">
+      <form class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title" novalidate>
+        <h2 id="m-title">${old ? 'Einheit ohne Sätze' : 'Gym ohne Erfassen'}</h2>
+        <p class="small muted">Für Training ohne Handy, z. B. mit Kumpels. Zählt für Wochenziel und Streak.</p>
+        <div class="seg q-splits" role="radiogroup" aria-label="Split">${splits.map((s) => `<button type="button" role="radio" data-split="${esc(s.id)}" class="${s.id === splitId ? 'is-on' : ''}" aria-checked="${s.id === splitId}">${esc(s.name)}</button>`).join('')}</div>
+        <div class="q-row">
+          <label>Datum <input type="date" id="q-date" value="${esc(old?.date || todayKey())}" max="${todayKey()}"></label>
+          <label>Dauer <input type="number" id="q-dur" inputmode="numeric" min="1" max="300" value="${old?.durationMin ?? 60}"> min</label>
+        </div>
+        <label class="q-note">Notiz <input type="text" id="q-note" maxlength="300" value="${esc(old?.note || '')}" placeholder="z. B. mit Kumpels, frei trainiert"></label>
+        ${old ? '<button type="button" class="btn btn-ghost btn-sm" data-q="edit">Sätze nachtragen</button>' : ''}
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-q="cancel">Abbrechen</button>
+          <button type="submit" class="btn btn-primary">${old ? 'Speichern' : 'Abhaken'}</button>
+        </div>
+      </form>
+    </div>`;
+    const root = modalRoot.querySelector('.modal-backdrop');
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(null); } };
+    const close = (v) => { modalRoot.innerHTML = ''; document.removeEventListener('keydown', onKey, true); resolve(v); };
+    root.addEventListener('click', (e) => {
+      if (e.target === root) { close(null); return; }
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.split) {
+        splitId = b.dataset.split;
+        root.querySelectorAll('[data-split]').forEach((x) => { const on = x.dataset.split === splitId; x.classList.toggle('is-on', on); x.setAttribute('aria-checked', String(on)); });
+      } else if (b.dataset.q === 'cancel') close(null);
+      else if (b.dataset.q === 'edit') close({ edit: true });
+    });
+    root.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const date = root.querySelector('#q-date').value;
+      const dur = Math.round(Number(root.querySelector('#q-dur').value));
+      close({ splitId, date: /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= todayKey() ? date : todayKey(),
+        durationMin: dur > 0 && dur <= 300 ? dur : null, note: root.querySelector('#q-note').value.trim() });
+    });
+    document.addEventListener('keydown', onKey, true);
+    root.querySelector('#q-dur').focus();
+  });
+}
+
+/** Übung hinzufügen: Suche über alle Übungen aller Splits und eigene Übungen; freier Name legt eine eigene Übung an. */
+function addExerciseModal() {
+  const splits = gymPlans()?.splits || [];
+  // schon in der Einheit: Übungen des Splits und bereits hinzugefügte
+  const seen = new Set([...(splitById(gymDraft?.splitId)?.exercises || []).map((x) => x.id), ...(gymDraft?.added || []).map((a) => a.id)]);
+  const all = [];
+  for (const sp of splits) for (const ex of sp.exercises) {
+    if (!isTracked(ex) || seen.has(ex.id)) continue;
+    seen.add(ex.id);
+    all.push({ id: ex.id, name: ex.name, sub: sp.name });
+  }
+  for (const o of ownExercises()) if (!seen.has(o.id)) all.push({ id: o.id, name: o.name, sub: 'Eigene Übung' });
+  const norm = (t) => String(t).toLowerCase();
+  return new Promise((resolve) => {
+    modalRoot.innerHTML = `<div class="modal-backdrop">
+      <div class="modal ax-modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+        <h2 id="m-title">Übung hinzufügen</h2>
+        <input type="search" id="ax-q" placeholder="Suchen oder eigenen Namen eingeben" autocomplete="off">
+        <ul class="ax-list" id="ax-list"></ul>
+        <div class="modal-actions single"><button class="btn btn-ghost" data-ax="cancel">Abbrechen</button></div>
+      </div>
+    </div>`;
+    const root = modalRoot.querySelector('.modal-backdrop');
+    const q = root.querySelector('#ax-q');
+    const draw = () => {
+      const t = norm(q.value.trim());
+      const hits = all.filter((x) => !t || norm(x.name).includes(t) || norm(x.sub).includes(t)).slice(0, 40);
+      const exact = t && all.some((x) => norm(x.name) === t);
+      root.querySelector('#ax-list').innerHTML = (t && !exact ? `<li><button class="ax-item" data-ax-new="1"><strong>„${esc(q.value.trim())}“</strong><span class="muted small">als eigene Übung</span></button></li>` : '')
+        + hits.map((x) => `<li><button class="ax-item" data-ax-id="${esc(x.id)}"><span>${esc(x.name)}</span><span class="muted small">${esc(x.sub)}</span></button></li>`).join('')
+        + (!hits.length && !t ? '<li class="muted small">Keine Übungen.</li>' : '');
+    };
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(null); } };
+    const close = (v) => { modalRoot.innerHTML = ''; document.removeEventListener('keydown', onKey, true); resolve(v); };
+    q.addEventListener('input', draw);
+    root.addEventListener('click', (e) => {
+      if (e.target === root) { close(null); return; }
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.ax === 'cancel') close(null);
+      else if (b.dataset.axNew) { const name = q.value.trim(); close({ id: ownExId(name), name }); }
+      else if (b.dataset.axId) { const x = all.find((y) => y.id === b.dataset.axId); close({ id: x.id, name: x.name }); }
+    });
+    document.addEventListener('keydown', onKey, true);
+    draw();
+    q.focus();
+  });
+}
+
 /** Aussetzen: Grund wählen. Gibt den Schlüssel aus SKIP_REASONS zurück oder null. */
 function skipModal(sp) {
   const wc = weekCounts(weekKey(new Date()));
@@ -801,7 +950,7 @@ async function saveGymDraft() {
   const d = gymDraft;
   const sp = splitById(d.splitId);
   const exercises = [];
-  for (const exPlan of sp.exercises) {
+  for (const exPlan of [...sp.exercises, ...(d.added || []).map((a) => exForLog(a.id, a.name))]) {
     const sets = (d.exercises[exPlan.id]?.sets || []).filter((s) => s.done)
       .map((s) => ({ kg: exPlan.bodyweight ? null : toNum(s.kg), reps: toNum(s.reps), ...(s.at ? { at: new Date(s.at).toISOString() } : {}) }))
       .filter((s) => s.reps != null || s.kg != null);
