@@ -10,7 +10,7 @@
    Carb-Mix (Wunsch des Nutzers 18.11.2026, ersetzt die Flaschen-Knöpfe): Scoop-Größe, Kohlenhydrate und Natrium je Gramm Pulver
    stehen nur im privaten Daten-Repository (verpflegung.json → mix, mit Quelle), nicht im Code. Milon lädt die Datei beim Abgleich.
    ========================================================================= */
-const UNIT_LOG_PATH = 'einheiten.json';
+const UNIT_LOG_PATH = 'einheiten.json';   // Eintrag je Einheit, seit v43 auch Kleidung (clothing, siehe kleidung.js)
 const UNIT_KEYS = { entries: 'milon.units.entries.v1', deleted: 'milon.units.deleted.v1' };
 const GUMMY_CARBS_PER_100G = 77;   // Gummibärchen: 100 g Produkt ≈ 77 g Kohlenhydrate (Angabe des Nutzers 15.11.2026)
 const FLUID_STEPS = [250, 500, 750];   // Getränk-Knöpfe in ml (Angabe des Nutzers 15.11.2026)
@@ -56,6 +56,7 @@ const unitKey = (s) => JSON.stringify([(s?.entries || []).map((x) => `${x.id}@${
 /** Von runSync() (app.js) aufgerufen. true = lokal hat sich etwas geändert. */
 async function syncUnitLog() {
   await loadMix();
+  if (typeof loadKleidung === 'function') await loadKleidung();   // kleidung.js: Modell + Wetter je Einheit
   const before = unitKey(unitSnapshot());
   const res = await GHSync.syncFile(UNIT_LOG_PATH, {
     local: unitSnapshot(), merge: mergeUnits, equals: (x, y) => unitKey(x) === unitKey(y),
@@ -80,7 +81,7 @@ function unitEntryFor(it) {
   if (it.planUid) return list.find((e) => e.planUid === it.planUid && e.date === it.date) || null;
   return null;
 }
-const unitHasData = (e) => !!e && (e.carbs_g != null || e.sodium_mg != null || e.fluid_ml != null || e.gut || (e.note || '').trim() || e.rpe != null);
+const unitHasData = (e) => !!e && (!!e.clothing || e.carbs_g != null || e.sodium_mg != null || e.fluid_ml != null || e.gut || (e.note || '').trim() || e.rpe != null);
 /** Knopf für eine Einheit (Zeilen in Heute und Auswertung). */
 function unitBtnHtml(it) {
   const e = unitEntryFor(it);
@@ -123,6 +124,8 @@ function openUnitSheet(it) {
   };
   const sportName = (typeof SPORT_NAME !== 'undefined' && SPORT_NAME[it.sport]) || 'Einheit';
   const mix = getMix();
+  // Kleidung (kleidung.js): nur Rad/Laufen draußen
+  const klSt = typeof klApplies === 'function' && klApplies(it, old) ? klInitialState(it, old) : null;
   const partText = (p) => {
     if (p.kind === 'gummi') return `Gummibärchen ${p.product_g} g (≈ ${p.g} g)`;
     if (p.kind === 'scoop') return `${fmtScoops(p.scoops)} Scoop${p.scoops > 1 ? 's' : ''} ${p.label || 'Carb-Mix'} (≈ ${p.g} g)`;
@@ -160,6 +163,7 @@ function openUnitSheet(it) {
         <div class="u-rpe-marks" aria-hidden="true">${Object.entries(RPE_MARKS).map(([n, w]) => `<span style="grid-column:${n}" class="m${n}">${w}</span>`).join('')}</div>
         <p class="u-rpe-desc ${st.rpe ? '' : 'muted'}" aria-live="polite">${esc(rpeText(st.rpe))}</p>
       </fieldset>
+      ${klSt ? klSectionHtml(it, old, klSt) : ''}
       <div class="modal-actions ${old ? 'u-three' : ''}">
         ${old ? '<button type="button" class="btn btn-ghost" data-u-delete>Löschen</button>' : ''}
         <button type="button" class="btn btn-ghost" data-u-close>Abbrechen</button>
@@ -169,6 +173,7 @@ function openUnitSheet(it) {
   </div>`;
   const root = modalRoot.querySelector('.u-backdrop');
   const form = root.querySelector('form');
+  const kl = klSt ? klBind(root, klSt) : null;
   const $ = (id) => root.querySelector(`#${id}`);
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
   const close = () => { modalRoot.innerHTML = ''; document.removeEventListener('keydown', onKey, true); };
@@ -243,7 +248,8 @@ function openUnitSheet(it) {
     const entry = {
       id: old?.id || unitIds(it)[0], date: it.date, sport: it.sport, title: it.title || '',
       activityId: it.activityId ? String(it.activityId) : (old?.activityId || null), planUid: it.planUid || old?.planUid || null,
-      carbs_g: st.carbs, carbs_parts: st.parts, sodium_mg: st.sodium, fluid_ml: st.fluid, gut: st.gut, note: st.note.trim(), rpe: st.rpe,
+      carbs_g: st.carbs, carbs_parts: st.parts, sodium_mg: st.sodium, fluid_ml: st.fluid,
+      clothing: kl ? kl.value() : (old?.clothing ?? null), gut: st.gut, note: st.note.trim(), rpe: st.rpe,
       createdAt: old?.createdAt || now, updatedAt: now,
     };
     if (!entry.id) { toast('Diese Einheit lässt sich noch nicht zuordnen.'); return; }
