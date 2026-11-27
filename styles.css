@@ -977,6 +977,9 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 /* Einheiten der Woche (Heute) */
+.h-uw { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
+.h-uw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.h-uw-head::-webkit-details-marker { display: none; }
 .h-uw-nav { display: inline-flex; align-items: center; gap: 4px; }
 .h-uw-nav .icon-btn:disabled { opacity: .35; }
 .h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
