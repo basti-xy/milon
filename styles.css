@@ -910,7 +910,7 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .st-seg::-webkit-scrollbar { display: none; }
 .st-seg button { flex: none; padding: 0 11px; }
 .st-ctrl { flex-direction: column; align-items: flex-start; }
-.st-tile { display: block; margin-bottom: 12px; color: inherit; text-decoration: none; }
+.st-tile { display: block; padding: 12px 14px; margin-bottom: 12px; color: inherit; text-decoration: none; }
 .st-bar { fill: var(--text-3); }
 .st-bar.s-swim { fill: var(--sport-swim); } .st-bar.s-bike { fill: var(--sport-bike); } .st-bar.s-run { fill: var(--sport-run); }
 .st-bar.s-strength { fill: var(--sport-strength); } .st-bar.s-stretch { fill: var(--sport-stretch); } .st-bar.s-other { fill: var(--text-3); }
@@ -964,7 +964,8 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .u-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
 .u-rpe button { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
 .u-rpe button.is-on, .u-seg button.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.q-splits { flex-wrap: wrap; margin: 10px 0; }
+.q-splits { display: flex; flex-direction: column; width: 100%; border-radius: 16px; margin: 10px 0; }
+.q-splits button { border-radius: 12px; text-align: left; padding: 0 14px; }
 .q-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
 .q-row label, .q-note { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .q-row input[type=number] { width: 72px; }
@@ -975,6 +976,22 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ax-list { list-style: none; margin: 0; padding: 0; max-height: 50dvh; overflow-y: auto; }
 .ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+/* Einheiten der Woche (Heute) */
+.h-uw { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
+.h-uw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.h-uw-head::-webkit-details-marker { display: none; }
+.h-uw-nav { display: inline-flex; align-items: center; gap: 4px; }
+.h-uw-nav .icon-btn:disabled { opacity: .35; }
+.h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
+.h-row.is-missed .h-row-title, .h-row.is-missed .h-row-sub { color: var(--text-2); }
+.h-row.is-missed .sdot { opacity: .45; }
+/* Eingabefelder der neuen Fenster einheitlich, Schrift ≥ 16 px – sonst zoomt das iPhone beim Antippen hinein */
+.kl-wx input, .kl-add input, .q-row input, .q-note input, .ax-modal #ax-q {
+  min-height: 44px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--fill);
+  color: var(--ink); font: inherit; font-size: 16px; }
+.kl textarea, #klr-text { width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--fill);
+  color: var(--ink); font: inherit; font-size: 16px; resize: vertical; }
+@media (pointer: coarse) { input, textarea, select { font-size: max(16px, 1em); } }   /* Sicherheitsnetz für alle Felder auf Touch-Geräten */
 /* Was ziehe ich an? (kleidung-seite.js) */
 .kl-tabs { margin: 0 0 12px; }
 .kl-calc { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
@@ -1014,7 +1031,9 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .kl-wx label span { display: flex; align-items: center; gap: 4px; color: var(--ink); font-size: 13px; }
 .kl-wx input { width: 100%; min-width: 0; }
 .kl-seg-row { display: flex; flex-direction: column; gap: 4px; }
-.kl-seg { flex-wrap: wrap; }
+/* Auswahl-Leisten (Kleidung): volle Breite, gleich breite Knöpfe statt umbrechender Pille */
+.kl-seg, .kl-tabs { display: flex; width: 100%; }
+.kl-seg button, .kl-tabs button { flex: 1 1 0; min-width: 0; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kl-check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .kl-cats { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--hair); padding-top: 8px; }
 .kl-cat-name { color: var(--text-2); }

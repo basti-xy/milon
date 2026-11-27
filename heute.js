@@ -278,6 +278,74 @@ function todoHtml(d, s, a, now) {
     ${rows.join('') || '<div class="h-empty">Heute steht nichts an.</div>'}
   </section>`;
 }
+/* ---------- Alle Einheiten der Woche (Wunsch des Nutzers 27.11.2026) ----------
+   In der Karte „Diese Woche“: alle Einheiten (Schwimmen, Rad, Laufen mit Erfassen-Knopf, Gym, Dehnen), nicht gemachte
+   Plan-Einheiten grau; ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
+   Gym und Dehnen aus den Milon-Daten. Knopf wie in „Steht heute an“ (einheit.js). */
+let hUnitsWeek = 0;       // 0 = diese Woche, 1 = letzte Woche, …
+let hUnitsOpen = true;    // Liste aufgeklappt (bleibt beim Blättern)
+function unitsWeekHtml(d, now) {
+  if (typeof unitBtnHtml !== 'function') return '';
+  const tKey = dayKey(now);
+  const mon = weekStart(now); mon.setDate(mon.getDate() - 7 * hUnitsWeek);
+  const sun = addDays(mon, 6);
+  const from = dayKey(mon), to = dayKey(sun);
+  const days = new Map();
+  const add = (date, html) => { if (!days.has(date)) days.set(date, []); days.get(date).push(html); };
+  const row = (sport, title, sub, btn, cls = '') => `<div class="h-row ${cls}"><span class="sdot s-${esc(sport)}" aria-hidden="true"></span>
+    <div class="h-row-main"><div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${esc(sub)}</div></div>${btn}</div>`;
+  const meta = (min, km) => [min ? `${fmtHM(min / 60)} h` : '', km ? `${fmtNum(km)} km` : ''].filter(Boolean).join(' · ');
+  let src = '';
+  if (hUnitsWeek === 0 && d?.week?.from === from) {
+    src = 'daily';
+    for (const day of d.week.days || []) {
+      if (day.date > tKey) continue;
+      for (const x of (day.done || []).filter((z) => z.id && ['swim', 'bike', 'run'].includes(z.sport))) {
+        add(day.date, row(x.sport, `${SPORT_NAME[x.sport]} · ${x.title}`, meta(x.min, x.km),
+          unitBtnHtml({ date: day.date, sport: x.sport, title: x.title, activityId: x.id, planUid: x.plan_uid || null })));
+      }
+      if (day.date < tKey) {
+        for (const p of (day.planned || []).filter((z) => !z.done && ['swim', 'bike', 'run'].includes(z.sport))) {
+          add(day.date, row(p.sport, `${SPORT_NAME[p.sport]} · ${p.title}`, 'aus dem Plan · nicht gemacht', '', 'is-missed'));
+        }
+      }
+    }
+  } else {
+    const w = trainingData()?.weeks.find((x) => x.from === from);
+    if (w) {
+      src = 'weekly';
+      for (const u of w.units || []) {
+        add(u.date, row(u.sport, `${SPORT_NAME[u.sport] || 'Einheit'} · ${u.title}`, meta(u.min, u.km), unitBtnHtml({ date: u.date, sport: u.sport, title: u.title, activityId: u.id })));
+      }
+    }
+  }
+  // Gym (Milon): ohne Sätze → kurzes Fenster, sonst Bearbeiten
+  if (typeof getGymSessions === 'function') {
+    for (const g of getGymSessions().filter((x) => x.date >= from && x.date <= to && !isSkip(x))) {
+      const name = splitById(g.splitId)?.name || g.splitName || 'Gym';
+      const sub = [g.durationMin ? `${fmtHM(g.durationMin / 60)} h` : '', g.quick ? 'ohne Sätze' : `${(g.exercises || []).length} Übungen`, g.note || ''].filter(Boolean).join(' · ');
+      const btn = g.quick ? `<button class="btn btn-sm" data-act="gym-quick-edit" data-id="${esc(g.id)}">Ändern</button>`
+        : `<a class="btn btn-sm" href="#/gym/edit/${encodeURIComponent(g.id)}">Ansehen</a>`;
+      add(g.date, row('strength', `Gym · ${name}`, sub, btn));
+    }
+  }
+  // Dehnen (Milon)
+  for (const h of getHistory().filter((x) => x.date >= from && x.date <= to)) {
+    const r = routineById(h.routineId);
+    add(h.date, row(r?.id === WEEKLY_ID() ? 'weekly' : 'stretch', `Dehnen · ${shortName(r) || h.routineId}`, h.durationSec ? `${Math.max(1, Math.round(h.durationSec / 60))} min` : '', ''));
+  }
+  const oldest = (trainingData()?.weeks || []).reduce((m, w) => (w.from < m ? w.from : m), from);
+  const n = [...days.values()].reduce((a, l) => a + l.length, 0);
+  const label = hUnitsWeek === 0 ? 'diese Woche' : hUnitsWeek === 1 ? 'letzte Woche' : `KW ${isoWeek(mon)}`;
+  const body = [...days.keys()].sort().reverse().map((k) => `<div class="h-uw-day small muted">${esc(k === tKey ? `Heute · ${dateShort(k)}` : dateShort(k))}</div>${days.get(k).join('')}`).join('');
+  return `<details class="h-uw" ${hUnitsOpen ? 'open' : ''}>
+    <summary class="h-uw-head"><span class="k">Alle Einheiten · ${esc(label)}${n ? ` (${n})` : ''}</span>
+      <span class="h-uw-nav"><span class="small muted">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
+        <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
+        <button class="icon-btn sm" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button></span></summary>
+    ${body || `<div class="h-empty">${src || n ? 'Keine Einheiten in dieser Woche.' : 'Für diese Woche gibt es noch keine Übersicht.'}</div>`}
+  </details>`;
+}
 function dehnRow(r, label, btn, { done = false, sub = '' } = {}) {
   return `<div class="h-row ${done ? 'is-done' : ''}"><span class="sdot s-stretch" aria-hidden="true"></span>
     <div class="h-row-main"><div class="h-row-title">${esc(label)}</div><div class="h-row-sub">${esc(sub || `${r.exercises.length} Übungen · ${Math.max(1, Math.round(totalDuration(r) / 60))} min`)}</div></div>
@@ -418,6 +486,7 @@ function weekCardHtml(d, wk, s, now) {
     ${bar ? `<div class="h-sbar">${bar}</div>` : ''}
     <div class="h-sums">${['swim', 'bike', 'run'].map((k) => `<span>${SPORT_SHORT[k]} ${fmtHM(wk?.done_h?.[k] || 0)}</span>`).join('')}${gym ? `<span>${gym}</span>` : ''}${dPlan ? `<span class="x-stretch">Dehnen ${dDone} von ${dPlan}</span>` : ''}</div>
     <div class="wk">${days}</div>
+    ${unitsWeekHtml(d, now)}
     <div class="h-leg"><span><i class="s-swim"></i>Schwimmen</span><span><i class="s-bike"></i>Rad</span><span><i class="s-run"></i>Laufen</span><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span>${weeklyLegend()}<span>gefüllt = erledigt · Ring = offen</span></div>
   </section>`;
 }
@@ -625,6 +694,7 @@ function renderTraining() {
 function handleHeuteAction(act, el) {
   if (handleLoadAction(act, el)) return; // belastung.js
   if (act === 'h-refresh') { refreshHealthNow(); return; }
+  if (act === 'h-uw-prev' || act === 'h-uw-next') { hUnitsWeek = Math.max(0, hUnitsWeek + (act === 'h-uw-prev' ? 1 : -1)); hUnitsOpen = true; rerenderCurrent(); return; }
   if (act === 'h-kd-range') { kdDays = Number(el.dataset.days) || 30; renderKoerper(currentRoute().arg); return; }
   if (act === 'h-cal-prev' || act === 'h-cal-next') {
     gcalOffset = Math.max(0, gcalOffset + (act === 'h-cal-prev' ? 1 : -1));
@@ -632,3 +702,7 @@ function handleHeuteAction(act, el) {
     if (box) box.innerHTML = gcalHtml(new Date(), gcalOffset);
   }
 }
+
+// „Alle Einheiten“ in der Karte „Diese Woche“: Auf-/Zuklappen merken; Klick auf ‹ › im Kopf klappt nicht zu
+document.addEventListener('toggle', (e) => { if (e.target?.classList?.contains('h-uw')) hUnitsOpen = e.target.open; }, true);
+document.addEventListener('click', (e) => { if (e.target.closest('.h-uw-head [data-act]')) e.preventDefault(); }, true);
