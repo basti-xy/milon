@@ -70,6 +70,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ◐ Gym-Tage (Standard Mo/Mi/Fr), seit v35 für alle Geräte über `milon-settings.json` (neueste Änderung gewinnt) – am zweiten Gerät prüfen
 - [x] ✓ Darstellung der App: Hell / Dunkel / Automatisch – unabhängig von „Beim Erfassen: Hell / Schwarz“
 - [x] ◐ „Garmin & Plan jetzt abrufen“: startet den Workflow Tagesdaten, zeigt Fortschritt, lädt danach neu; Hinweis bei fehlender Token-Berechtigung (mit echter GitHub-Antwort am Gerät prüfen)
+- [x] ◐ Abruf beim ersten Öffnen des Tages (v57): nur wenn `daily.json` nicht von heute ist und heute noch kein Lauf des Workflows (von keinem Gerät, auch kein geplanter) gestartet wurde; ein Versuch pro Gerät und Tag (`milon.health.autoRefresh.v1`), ohne Berechtigung still; oben rechts „Wird abgerufen …“ (am Gerät prüfen)
 - [x] ◐ Einheit nachtragen, Verlauf mit Löschen
 - [x] ◐ Backup speichern / einspielen, Erinnerung
 - [x] ◐ Sync verbinden, abgleichen, trennen; Status-Punkt am Zahnrad
