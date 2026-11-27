@@ -993,7 +993,12 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .h-uw .sdot { flex: none; }
 
 .h-uw-nav .icon-btn:disabled { opacity: .35; }
+.h-uw-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
+.h-uw-sec { margin: 12px 0 0; padding-top: 8px; border-top: 1px solid var(--hair); }
+.h-uw-nav + .h-uw-sec { border-top: 0; padding-top: 0; margin-top: 4px; }
+.sdot.o { background: transparent; border: 1.5px solid var(--c, var(--text-2)); }
+.sdot.o::before { background: var(--c) !important; inset: 14% !important; }
 .h-row.is-missed .h-row-title, .h-row.is-missed .h-row-sub { color: var(--text-2); }
 .h-row.is-missed .sdot { opacity: .45; }
 /* Eingabefelder der neuen Fenster einheitlich, Schrift ≥ 16 px – sonst zoomt das iPhone beim Antippen hinein */

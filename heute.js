@@ -279,8 +279,9 @@ function todoHtml(d, s, a, now) {
   </section>`;
 }
 /* ---------- Alle Einheiten der Woche (Wunsch des Nutzers 27.11.2026) ----------
-   In der Karte „Diese Woche“: alle Einheiten (Schwimmen, Rad, Laufen mit Erfassen-Knopf, Gym, Dehnen), nicht gemachte
-   Plan-Einheiten grau; ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
+   In der Karte „Diese Woche“: oben „Noch geplant“ (offene Plan-Einheiten ab heute, Ring-Punkt, Uhrzeit, Link „Kleidung“),
+   darunter „Erledigt“ (Schwimmen, Rad, Laufen mit Erfassen-Knopf, Gym, Dehnen), nicht gemachte Plan-Einheiten grau;
+   ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
    Gym und Dehnen aus den Milon-Daten. Knopf wie in „Steht heute an“ (einheit.js). */
 let hUnitsWeek = 0;       // 0 = diese Woche, 1 = letzte Woche, …
 let hUnitsOpen = false;   // Liste zugeklappt, bis man sie öffnet (Wunsch des Nutzers 27.11.2026); bleibt beim Blättern offen
@@ -292,21 +293,24 @@ function unitsWeekHtml(d, now) {
   const from = dayKey(mon), to = dayKey(sun);
   const days = new Map();
   const add = (date, html) => { if (!days.has(date)) days.set(date, []); days.get(date).push(html); };
-  const row = (sport, title, sub, btn, cls = '') => `<div class="h-row ${cls}"><span class="sdot s-${esc(sport)}" aria-hidden="true"></span>
+  const upcoming = new Map();   // Datum → Zeilen (noch geplant)
+  const addUp = (date, html) => { if (!upcoming.has(date)) upcoming.set(date, []); upcoming.get(date).push(html); };
+  const row = (sport, title, sub, btn, cls = '') => `<div class="h-row ${cls}"><span class="sdot s-${esc(sport)}${cls === 'is-planned' ? ' o' : ''}" aria-hidden="true"></span>
     <div class="h-row-main"><div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${esc(sub)}</div></div>${btn}</div>`;
   const meta = (min, km) => [min ? `${fmtHM(min / 60)} h` : '', km ? `${fmtNum(km)} km` : ''].filter(Boolean).join(' · ');
   let src = '';
   if (hUnitsWeek === 0 && d?.week?.from === from) {
     src = 'daily';
     for (const day of d.week.days || []) {
-      if (day.date > tKey) continue;
-      for (const x of (day.done || []).filter((z) => z.id && ['swim', 'bike', 'run'].includes(z.sport))) {
+      for (const x of (day.done || []).filter((z) => day.date <= tKey && z.id && ['swim', 'bike', 'run'].includes(z.sport))) {
         add(day.date, row(x.sport, `${SPORT_NAME[x.sport]} · ${x.title}`, meta(x.min, x.km),
           unitBtnHtml({ date: day.date, sport: x.sport, title: x.title, activityId: x.id, planUid: x.plan_uid || null })));
       }
-      if (day.date < tKey) {
-        for (const p of (day.planned || []).filter((z) => !z.done && ['swim', 'bike', 'run'].includes(z.sport))) {
-          add(day.date, row(p.sport, `${SPORT_NAME[p.sport]} · ${p.title}`, 'aus dem Plan · nicht gemacht', '', 'is-missed'));
+      for (const p of (day.planned || []).filter((z) => !z.done && ['swim', 'bike', 'run'].includes(z.sport))) {
+        if (day.date < tKey) add(day.date, row(p.sport, `${SPORT_NAME[p.sport]} · ${p.title}`, 'aus dem Plan · nicht gemacht', '', 'is-missed'));
+        else {
+          addUp(day.date, row(p.sport, `${SPORT_NAME[p.sport]} · ${p.title}`, [p.time && p.time !== '00:00' ? p.time : '', p.min ? `${fmtHM(p.min / 60)} h` : '', 'geplant'].filter(Boolean).join(' · '),
+            typeof klPlanLinkHtml === 'function' ? klPlanLinkHtml({ ...p, date: day.date }) : '', 'is-planned'));
         }
       }
     }
@@ -336,10 +340,14 @@ function unitsWeekHtml(d, now) {
   }
   const oldest = (trainingData()?.weeks || []).reduce((m, w) => (w.from < m ? w.from : m), from);
   const n = [...days.values()].reduce((a, l) => a + l.length, 0);
+  const nUp = [...upcoming.values()].reduce((a, l) => a + l.length, 0);
   const label = hUnitsWeek === 0 ? 'diese Woche' : hUnitsWeek === 1 ? 'letzte Woche' : `KW ${isoWeek(mon)}`;
-  const body = [...days.keys()].sort().reverse().map((k) => `<div class="h-uw-day small muted">${esc(k === tKey ? `Heute · ${dateShort(k)}` : dateShort(k))}</div>${days.get(k).join('')}`).join('');
+  const dayHead = (k) => `<div class="h-uw-day small muted">${esc(k === tKey ? `Heute · ${dateShort(k)}` : dateShort(k))}</div>`;
+  const upBody = [...upcoming.keys()].sort().map((k) => dayHead(k) + upcoming.get(k).join('')).join('');
+  const doneBody = [...days.keys()].sort().reverse().map((k) => dayHead(k) + days.get(k).join('')).join('');
+  const body = (upBody ? `<div class="h-uw-sec k">Noch geplant</div>${upBody}` : '') + (doneBody ? `${upBody ? '<div class="h-uw-sec k">Erledigt</div>' : ''}${doneBody}` : '');
   return `<details class="h-uw" ${hUnitsOpen ? 'open' : ''}>
-    <summary class="h-uw-head"><span class="k">Alle Einheiten · ${esc(label)}${n ? ` (${n})` : ''}</span><span class="h-uw-chev" aria-hidden="true"></span></summary>
+    <summary class="h-uw-head"><span class="h-uw-title"><span class="k">Alle Einheiten · ${esc(label)}</span>${n || nUp ? `<span class="small muted">${esc([n ? `${n} erledigt` : '', nUp ? `${nUp} geplant` : ''].filter(Boolean).join(' · '))}</span>` : ''}</span><span class="h-uw-chev" aria-hidden="true"></span></summary>
     <div class="h-uw-nav">
       <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
       <span class="h-uw-range">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
