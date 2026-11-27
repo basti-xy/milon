@@ -802,10 +802,10 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
   .page { padding-left: 28px; padding-right: 28px; }
   .h-stamp { display: inline-flex; }
   #h-cal { display: flex; }
-  .h-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  .h-grid > .span-2, .h-grid > .h-metrics-head, .h-grid > .h-warns { grid-column: span 2; }
-  .h-metrics { grid-column: span 2; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .h-ins.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .h-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .h-grid > .h-warns { grid-column: 1 / -1; }
+  .h-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .h-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .h-sums { display: flex; gap: 18px; }
   .h-sums .x-stretch { display: inline; }
   .h-12w { display: flex; }
@@ -815,13 +815,13 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
   .page.page-mid { max-width: 1100px; }
 }
 @media (min-width: 1180px) {
+  .h-ins.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }   /* erst ab iPad quer: in der halben Breite sonst zu eng */
+}
+@media (min-width: 1180px) {
   .page.page-wide { padding: calc(var(--safe-top) + 26px) 36px calc(84px + var(--safe-bottom)); }
-  .h-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-  .h-grid > .span-2 { grid-column: span 2; }
-  .h-grid > .h-metrics-head, .h-grid > .h-warns { grid-column: span 4; }
-  .h-grid > .h-races, .h-grid > #h-cal { grid-column: span 2; } /* mit der Kachel Belastung: Belastung + Woche, darunter Wettkämpfe + Kalender */
-  .h-metrics { grid-column: span 4; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-  .h-metrics-head { margin-bottom: -6px; }
+  .h-grid { gap: 16px; }
+  .h-col { gap: 16px; }
+  .h-metrics { gap: 14px; }
   .h-date { font-size: 34px; }
   .mt { padding: 12px 14px 10px; }
   .mt-vr { flex-direction: row; justify-content: space-between; align-items: baseline; }
@@ -977,13 +977,26 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 /* Einheiten der Woche (Heute) */
-.h-uw { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
-.h-uw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; min-height: 40px; }
-.h-uw-nav { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 2px 0 4px; }
-.h-uw-range { font-family: var(--mono); font-size: 12px; color: var(--text-2); min-width: 104px; text-align: center; }
-.h-uw-head::-webkit-details-marker { display: none; }
-.h-uw-chev::after { content: '▾'; color: var(--text-2); font-size: 13px; }
-.h-uw[open] .h-uw-chev::after { content: '▴'; }
+/* Seite „Woche“ */
+.page-woche .h-uw { padding: 4px 14px 10px; }
+.h-uw-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 0 0 8px; }
+.h-uw-range { text-align: center; min-width: 140px; font-family: var(--mono); font-size: 13px; color: var(--text-2); }
+.h-uw-range .k { color: var(--ink); }
+.h-uw-count { text-align: center; margin: 0 0 10px; }
+.h-uw > .h-uw-sec:first-child { border-top: 0; padding-top: 4px; margin-top: 4px; }
+.h-uw > .h-uw-day:first-child { margin-top: 6px; }
+/* Karte „Diese Woche“ als Link */
+a.h-week { color: inherit; text-decoration: none; }
+a.h-week:active { background: var(--fill); }
+.h-week-more { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--hair); font-size: 13px; color: var(--text-2); }
+.h-week-more .m { color: var(--ink); font-weight: 600; }
+/* Startseite: zwei unabhängige Spalten auf dem iPad, auf dem iPhone eine Spalte in fester Reihenfolge */
+.h-body { display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 767px) {
+  .h-col { display: contents; }
+  .h-col-a > .h-assess { order: 1; } .h-col-a > .h-todo { order: 2; } .h-col-b > .h-week { order: 3; } .h-col-b > .h-body { order: 4; }
+  .h-col-a > .ld-tile { order: 5; } .h-col-a > .h-races { order: 6; } .h-col-b > #h-cal { order: 7; }
+}
 /* kompakte Zeilen in der Liste (eine Zeile je Einheit, kleinere Knöpfe) */
 .h-uw .h-row { padding: 6px 0; gap: 8px; min-height: 44px; border-top: 0; }
 .h-uw .h-row-main { min-width: 0; }
@@ -994,6 +1007,10 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 
 .h-uw-nav .icon-btn:disabled { opacity: .35; }
 .h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
+.h-uw-sec { margin: 12px 0 0; padding-top: 8px; border-top: 1px solid var(--hair); }
+.h-uw-nav + .h-uw-sec { border-top: 0; padding-top: 0; margin-top: 4px; }
+.sdot.o { background: transparent; border: 1.5px solid var(--c, var(--text-2)); }
+.sdot.o::before { background: var(--c) !important; inset: 14% !important; }
 .h-row.is-missed .h-row-title, .h-row.is-missed .h-row-sub { color: var(--text-2); }
 .h-row.is-missed .sdot { opacity: .45; }
 /* Eingabefelder der neuen Fenster einheitlich, Schrift ≥ 16 px – sonst zoomt das iPhone beim Antippen hinein */

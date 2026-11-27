@@ -1106,7 +1106,7 @@ function rerenderCurrent() {
   if (run || modalOpen() || !DATA) return;
   const { name: n, arg } = currentRoute();
   // Unterseiten mit Eingaben (Gym erfassen) nicht neu zeichnen, sonst gingen Eingaben verloren
-  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper' || n === 'belastung' || n === 'statistik') route({ keepScroll: true });
+  if ((isMainTab(n) && !arg) || n === 'settings' || n === 'auswertung' || n === 'koerper' || n === 'belastung' || n === 'statistik' || n === 'woche') route({ keepScroll: true });
 }
 
 function route({ keepScroll = false } = {}) {
@@ -1165,6 +1165,9 @@ function route({ keepScroll = false } = {}) {
       return;
     case 'statistik':
       renderStatistik(); // statistik.js
+      return;
+    case 'woche':
+      renderWoche(); // heute.js
       return;
     case 'kleidung':
       renderKleidung(r.arg, r.arg2); // kleidung-seite.js
