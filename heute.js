@@ -283,7 +283,7 @@ function todoHtml(d, s, a, now) {
    Plan-Einheiten grau; ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
    Gym und Dehnen aus den Milon-Daten. Knopf wie in „Steht heute an“ (einheit.js). */
 let hUnitsWeek = 0;       // 0 = diese Woche, 1 = letzte Woche, …
-let hUnitsOpen = true;    // Liste aufgeklappt (bleibt beim Blättern)
+let hUnitsOpen = false;   // Liste zugeklappt, bis man sie öffnet (Wunsch des Nutzers 27.11.2026); bleibt beim Blättern offen
 function unitsWeekHtml(d, now) {
   if (typeof unitBtnHtml !== 'function') return '';
   const tKey = dayKey(now);
@@ -339,10 +339,12 @@ function unitsWeekHtml(d, now) {
   const label = hUnitsWeek === 0 ? 'diese Woche' : hUnitsWeek === 1 ? 'letzte Woche' : `KW ${isoWeek(mon)}`;
   const body = [...days.keys()].sort().reverse().map((k) => `<div class="h-uw-day small muted">${esc(k === tKey ? `Heute · ${dateShort(k)}` : dateShort(k))}</div>${days.get(k).join('')}`).join('');
   return `<details class="h-uw" ${hUnitsOpen ? 'open' : ''}>
-    <summary class="h-uw-head"><span class="k">Alle Einheiten · ${esc(label)}${n ? ` (${n})` : ''}</span>
-      <span class="h-uw-nav"><span class="small muted">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
-        <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
-        <button class="icon-btn sm" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button></span></summary>
+    <summary class="h-uw-head"><span class="k">Alle Einheiten · ${esc(label)}${n ? ` (${n})` : ''}</span><span class="h-uw-chev" aria-hidden="true"></span></summary>
+    <div class="h-uw-nav">
+      <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
+      <span class="h-uw-range">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
+      <button class="icon-btn sm" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button>
+    </div>
     ${body || `<div class="h-empty">${src || n ? 'Keine Einheiten in dieser Woche.' : 'Für diese Woche gibt es noch keine Übersicht.'}</div>`}
   </details>`;
 }
@@ -703,6 +705,5 @@ function handleHeuteAction(act, el) {
   }
 }
 
-// „Alle Einheiten“ in der Karte „Diese Woche“: Auf-/Zuklappen merken; Klick auf ‹ › im Kopf klappt nicht zu
+// „Alle Einheiten“ in der Karte „Diese Woche“: Auf-/Zuklappen merken
 document.addEventListener('toggle', (e) => { if (e.target?.classList?.contains('h-uw')) hUnitsOpen = e.target.open; }, true);
-document.addEventListener('click', (e) => { if (e.target.closest('.h-uw-head [data-act]')) e.preventDefault(); }, true);

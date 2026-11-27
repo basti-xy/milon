@@ -978,9 +978,20 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 /* Einheiten der Woche (Heute) */
 .h-uw { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
-.h-uw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.h-uw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; min-height: 40px; }
+.h-uw-nav { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 2px 0 4px; }
+.h-uw-range { font-family: var(--mono); font-size: 12px; color: var(--text-2); min-width: 104px; text-align: center; }
 .h-uw-head::-webkit-details-marker { display: none; }
-.h-uw-nav { display: inline-flex; align-items: center; gap: 4px; }
+.h-uw-chev::after { content: '▾'; color: var(--text-2); font-size: 13px; }
+.h-uw[open] .h-uw-chev::after { content: '▴'; }
+/* kompakte Zeilen in der Liste (eine Zeile je Einheit, kleinere Knöpfe) */
+.h-uw .h-row { padding: 6px 0; gap: 8px; min-height: 44px; border-top: 0; }
+.h-uw .h-row-main { min-width: 0; }
+.h-uw .h-row-title { font-family: var(--sans); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-uw .h-row-sub { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-uw .h-row .btn { min-height: 34px; padding: 0 10px; font-size: 12px; }
+.h-uw .sdot { flex: none; }
+
 .h-uw-nav .icon-btn:disabled { opacity: .35; }
 .h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
 .h-row.is-missed .h-row-title, .h-row.is-missed .h-row-sub { color: var(--text-2); }
