@@ -976,6 +976,12 @@ body.has-tabbar .page { padding-bottom: calc(96px + var(--safe-bottom)); }
 .ax-list { list-style: none; margin: 0; padding: 0; max-height: 50dvh; overflow-y: auto; }
 .ax-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px;
   background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+/* Einheiten der Woche (Heute) */
+.h-uw-nav { display: inline-flex; align-items: center; gap: 4px; }
+.h-uw-nav .icon-btn:disabled { opacity: .35; }
+.h-uw-day { margin: 10px 0 2px; font-weight: 600; letter-spacing: .04em; }
+.h-row.is-missed .h-row-title, .h-row.is-missed .h-row-sub { color: var(--text-2); }
+.h-row.is-missed .sdot { opacity: .45; }
 /* Eingabefelder der neuen Fenster einheitlich, Schrift ≥ 16 px – sonst zoomt das iPhone beim Antippen hinein */
 .kl-wx input, .kl-add input, .q-row input, .q-note input, .ax-modal #ax-q {
   min-height: 44px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--fill);

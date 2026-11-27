@@ -41,6 +41,7 @@ Bei jedem größeren Umbau vorher durchgehen und am Ende abhaken. Stand: v35 (Gy
 - [x] ✓ Kopf mit KW · Planwoche · Phase, Datum, „Daten von …“ (iPad)
 - [x] ✓ Einschätzung (Ampel), Letzte Woche mit ✓ / ✗ / →, Link Ganze Auswertung
 - [x] ✓ Steht heute an: Plan-Einheiten (Details aufklappbar), Gym an den Gym-Tagen, Dehnen – direkt startbar
+- [x] ◐ Einheiten der Woche (v46, Heute unter „Steht heute an“): frühere Tage der Woche mit Erfassen/✓ Erfasst, nicht gemachte Plan-Einheiten grau, ‹ › ältere Wochen (weekly.json)
 - [x] ◐ Kleidung (v43): Abschnitt im Fenster „Einheit erfassen“ bei Rad/Laufen draußen – Wetter, Intensität und Dauer vorbelegt (Open-Meteo, Pulszonen, Garmin-Dauer), Stufen editierbar, Kleidung je Kategorie als Chips mit Autovervollständigung, Bewertung je Körperbereich, Notiz; Kleidungs-Temperatur und Stufe live
 - [x] ◐ „Was ziehe ich an?“ (v44, `#/kleidung`): Rechner (Sport, Temperatur, Intensität, Dauer, Wind, Nässe, Licht, Abfahrten, persönlicher Ausgleich) → Kleidungs-Temperatur, Stufe, Empfehlung je Kategorie (Eigene Regel / Erprobt / Vorschlag, Varianten, „zu kalt/zu warm“ markiert, Tipp), ähnliche Einheiten, Hinweise; Tabelle je Sportart mit eigenen Regeln; Vorhersage für Plan-Einheiten (Link „Kleidung“ in Heute)
 - [x] ✓ Einheit erfassen (v38): Knopf an Plan- und Garmin-Einheiten (Heute) und unter „Einheiten der Woche“ (Auswertung) → Fenster mit

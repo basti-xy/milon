@@ -194,6 +194,7 @@ function renderHeute() {
       ${warns.length ? `<div class="h-warns" style="display:grid;gap:8px">${warns.map((w) => `<div class="h-warn lv-${esc(w.level)}">${esc(w.text)}</div>`).join('')}</div>` : ''}
       ${assessHtml(d)}
       ${todoHtml(d, s, a, now)}
+      ${unitsWeekHtml(d, now)}
       ${metricsHtml(d)}
       ${loadTileHtml()}
       ${weekCardHtml(d, wk, s, now)}
@@ -276,6 +277,54 @@ function todoHtml(d, s, a, now) {
   return `<section class="tile h-todo span-2">
     <div class="h-todo-head"><span class="k">Steht heute an</span>${openMin ? `<span class="m small muted">~${fmtHM(openMin / 60)} h</span>` : ''}</div>
     ${rows.join('') || '<div class="h-empty">Heute steht nichts an.</div>'}
+  </section>`;
+}
+/* ---------- Einheiten der Woche (Wunsch des Nutzers 27.11.2026): frühere Tage nachträglich erfassen/bearbeiten ----------
+   Unter „Steht heute an“. Woche 0 = laufende Woche bis gestern aus daily.json → week.days (Garmin-Einheiten + nicht gemachte
+   Plan-Einheiten), ältere Wochen aus training/weekly.json → units. Knopf wie in „Steht heute an“ (einheit.js). */
+let hUnitsWeek = 0;   // 0 = diese Woche, 1 = letzte Woche, …
+function unitsWeekHtml(d, now) {
+  if (typeof unitBtnHtml !== 'function') return '';
+  const tKey = dayKey(now);
+  const mon = new Date(now); mon.setHours(12, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7 * hUnitsWeek);
+  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+  const from = dayKey(mon);
+  const days = new Map();   // Datum → Zeilen
+  const add = (date, html) => { if (!days.has(date)) days.set(date, []); days.get(date).push(html); };
+  const row = (sport, title, sub, btn, cls = '') => `<div class="h-row ${cls}"><span class="sdot s-${esc(sport)}" aria-hidden="true"></span>
+    <div class="h-row-main"><div class="h-row-title">${esc(`${SPORT_NAME[sport] || 'Einheit'} · ${title}`)}</div><div class="h-row-sub">${esc(sub)}</div></div>${btn}</div>`;
+  let src = '';
+  if (hUnitsWeek === 0 && d?.week?.from === from) {
+    src = 'daily';
+    for (const day of d.week.days || []) {
+      if (day.date >= tKey) continue;   // heute steht oben in „Steht heute an“
+      for (const x of (day.done || []).filter((z) => z.id && ['swim', 'bike', 'run'].includes(z.sport))) {
+        add(day.date, row(x.sport, x.title, [x.min ? `${fmtHM(x.min / 60)} h` : '', x.km ? `${fmtNum(x.km)} km` : ''].filter(Boolean).join(' · '),
+          unitBtnHtml({ date: day.date, sport: x.sport, title: x.title, activityId: x.id, planUid: x.plan_uid || null })));
+      }
+      for (const p of (day.planned || []).filter((z) => !z.done && z.sport !== 'strength' && ['swim', 'bike', 'run'].includes(z.sport))) {
+        add(day.date, row(p.sport, p.title, 'aus dem Plan · nicht gemacht', '', 'is-missed'));
+      }
+    }
+  } else {
+    const w = trainingData()?.weeks.find((x) => x.from === from);
+    if (w) {
+      src = 'weekly';
+      for (const u of w.units || []) {
+        add(u.date, row(u.sport, u.title, [u.min ? `${fmtHM(u.min / 60)} h` : '', u.km ? `${fmtNum(u.km)} km` : ''].filter(Boolean).join(' · '),
+          unitBtnHtml({ date: u.date, sport: u.sport, title: u.title, activityId: u.id })));
+      }
+    }
+  }
+  const oldest = trainingData()?.weeks.reduce((m, w) => (w.from < m ? w.from : m), from) || from;
+  const label = hUnitsWeek === 0 ? 'Diese Woche' : hUnitsWeek === 1 ? 'Letzte Woche' : `KW ${isoWeek(mon)}`;
+  const body = [...days.keys()].sort().reverse().map((k) => `<div class="h-uw-day small muted">${esc(dateShort(k))}</div>${days.get(k).join('')}`).join('');
+  return `<section class="tile h-todo span-2 h-uw">
+    <div class="h-todo-head"><span class="k">Einheiten · ${esc(label)}</span>
+      <span class="h-uw-nav"><span class="small muted">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
+        <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
+        <button class="icon-btn sm" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button></span></div>
+    ${body || `<div class="h-empty">${hUnitsWeek === 0 ? 'Noch keine früheren Tage in dieser Woche – mit ‹ zur letzten Woche.' : src ? 'Keine Einheiten in dieser Woche.' : 'Für diese Woche gibt es noch keine Übersicht.'}</div>`}
   </section>`;
 }
 function dehnRow(r, label, btn, { done = false, sub = '' } = {}) {
@@ -625,6 +674,7 @@ function renderTraining() {
 function handleHeuteAction(act, el) {
   if (handleLoadAction(act, el)) return; // belastung.js
   if (act === 'h-refresh') { refreshHealthNow(); return; }
+  if (act === 'h-uw-prev' || act === 'h-uw-next') { hUnitsWeek = Math.max(0, hUnitsWeek + (act === 'h-uw-prev' ? 1 : -1)); rerenderCurrent(); return; }
   if (act === 'h-kd-range') { kdDays = Number(el.dataset.days) || 30; renderKoerper(currentRoute().arg); return; }
   if (act === 'h-cal-prev' || act === 'h-cal-next') {
     gcalOffset = Math.max(0, gcalOffset + (act === 'h-cal-prev' ? 1 : -1));

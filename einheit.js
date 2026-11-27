@@ -79,7 +79,13 @@ function unitEntryFor(it) {
   const byIds = list.find((e) => ids.includes(e.id));
   if (byIds) return byIds;
   if (it.activityId) { const byAid = list.find((e) => String(e.activityId) === String(it.activityId)); if (byAid) return byAid; }
-  if (it.planUid) return list.find((e) => e.planUid === it.planUid && e.date === it.date) || null;
+  if (it.planUid) { const byPlan = list.find((e) => e.planUid === it.planUid && e.date === it.date); if (byPlan) return byPlan; }
+  // Aufzeichnung ohne bekannte Plan-Zuordnung (z. B. ältere Wochen aus weekly.json): ein vorher zur Plan-Einheit erfasster Eintrag
+  // desselben Tages und derselben Sportart ohne Garmin-ID – nur wenn es genau einen gibt. Beim Speichern bekommt er die Garmin-ID.
+  if (it.activityId) {
+    const cand = list.filter((e) => !e.activityId && e.planUid && e.date === it.date && e.sport === it.sport);
+    if (cand.length === 1) return cand[0];
+  }
   return null;
 }
 const unitHasData = (e) => !!e && (!!e.clothing || e.carbs_g != null || e.sodium_mg != null || e.fluid_ml != null || e.gut || (e.note || '').trim() || e.rpe != null);
