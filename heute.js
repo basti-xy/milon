@@ -33,6 +33,35 @@ async function loadHealth() {
   }
   if (typeof loadStats === 'function' && await loadStats()) changed = true;   // statistik.js (health/stats.json)
   if (changed && ['home', 'koerper', 'training', 'belastung', 'werte', 'statistik', 'woche'].includes(currentRoute().name)) rerenderCurrent();
+  autoRefreshFirstOpen();
+}
+
+/* ---------- Abruf beim ersten Öffnen des Tages (seit v57) ----------
+   GitHub startet geplante Läufe bei hoher Last stark verspätet (ab 21.11.2026 oft erst abends), von Hand gestartete
+   (workflow_dispatch) dagegen sofort. Deshalb startet Milon beim ersten Öffnen des Tages einmal den Abruf –
+   nur, wenn die Tagesdaten noch nicht von heute sind und heute noch kein Lauf (egal von welchem Gerät oder
+   ob geplant) gestartet wurde. Höchstens ein Versuch pro Gerät und Tag; ohne Berechtigung im Token passiert still nichts.
+   Die geplanten Läufe in taeglich.yml bleiben als Rückfall. */
+const AUTO_REFRESH_KEY = 'milon.health.autoRefresh.v1';
+let autoRefreshBusy = false;
+async function autoRefreshFirstOpen() {
+  const c = GHSync.getConfig();
+  const today = dayKey(new Date());
+  if (!c || navigator.onLine === false || autoRefreshBusy || refresh.status === 'running') return;
+  if (store.get(AUTO_REFRESH_KEY, null) === today) return;   // heute auf diesem Gerät schon geprüft
+  const d = healthData();
+  if (d?.data_date === today) { store.set(AUTO_REFRESH_KEY, today); return; }
+  autoRefreshBusy = true;
+  try {
+    const midnight = new Date(`${today}T00:00:00`).toISOString().slice(0, 19) + 'Z';
+    const r = await GHSync.repoApi(c, 'GET', `/actions/workflows/${HEALTH_WORKFLOW}/runs?created=%3E%3D${midnight}&per_page=1`);
+    store.set(AUTO_REFRESH_KEY, today);
+    if ((r?.total_count || 0) > 0) return;   // heute lief schon einer (oder wartet gerade)
+    await refreshHealthNow({ auto: true });
+  } catch (e) {
+    if ([401, 403, 404].includes(e?.status)) store.set(AUTO_REFRESH_KEY, today);   // keine Berechtigung: heute nicht mehr versuchen
+    // sonst kein Netz – beim nächsten Öffnen erneut prüfen
+  } finally { autoRefreshBusy = false; }
 }
 
 /* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
@@ -51,8 +80,11 @@ function setRefresh(status, message, url = refresh.url) {
   if (box) box.innerHTML = refreshStatusHtml();
   const btn = document.querySelector('[data-act="h-refresh"]');
   if (btn) btn.disabled = status === 'running';
+  const stamp = document.getElementById('h-stamp');   // Heute oben rechts
+  if (stamp && status === 'running') { stamp.classList.add('is-old'); stamp.lastChild.textContent = 'Wird abgerufen …'; }
+  else if (stamp && currentRoute().name === 'home') rerenderCurrent();   // fertig/Fehler: Stand neu zeigen
 }
-async function refreshHealthNow() {
+async function refreshHealthNow({ auto = false } = {}) {
   const c = GHSync.getConfig();
   if (!c || refresh.status === 'running') return;
   if (navigator.onLine === false) { setRefresh('error', 'Offline – ohne Internet kann der Abruf nicht starten.', ''); return; }
@@ -63,6 +95,7 @@ async function refreshHealthNow() {
     await GHSync.repoApi(c, 'POST', `/actions/workflows/${HEALTH_WORKFLOW}/dispatches`, { ref: c.branch || 'main', inputs: { days: '3' } });
   } catch (e) {
     const noRight = e.status === 403 || e.status === 404;
+    if (auto) { setRefresh('idle', '', ''); if (currentRoute().name === 'home') rerenderCurrent(); return; }   // automatisch: still
     setRefresh('error', noRight
       ? 'Dem Token fehlt die Berechtigung „Actions: Read and write“ für das Daten-Repository. Auf GitHub beim Token ergänzen, dann erneut versuchen.'
       : (e.message || 'Start fehlgeschlagen.'), '');
@@ -102,7 +135,8 @@ function refreshCardHtml() {
     <h2 class="card-title">Tagesdaten abrufen</h2>
     <p class="small muted">Startet auf GitHub den Abruf <strong>neuer Garmin-Daten</strong> (Schlaf, HRV, Ruhepuls, Aktivitäten) und des
       <strong>Trainingsplan-Kalenders</strong> und baut daraus die Tagesdaten für „Heute“ neu. Das ist mehr als „Jetzt abgleichen“,
-      das nur die Dateien zwischen Gerät und GitHub austauscht. Läuft sonst automatisch jeden Morgen; dauert etwa 1 Minute.</p>
+      das nur die Dateien zwischen Gerät und GitHub austauscht. Startet sonst automatisch einmal am Tag beim ersten Öffnen von Milon, wenn die Daten noch nicht von heute sind
+      (dazu morgens nach Zeitplan auf GitHub, der oft Stunden zu spät kommt); dauert etwa 1 Minute.</p>
     <ul class="status-list small"><li><span class="muted">Tagesdaten</span><strong>${esc(t)}</strong></li></ul>
     <div id="refresh-status">${refreshStatusHtml()}</div>
     <div class="btn-row"><button class="btn btn-secondary" data-act="h-refresh" ${refresh.status === 'running' ? 'disabled' : ''}>Garmin & Plan jetzt abrufen</button></div>
@@ -185,7 +219,7 @@ function renderHeute() {
         <h1 class="h-date">${esc(dateLong(now))}</h1>
       </div>
       <div class="head-right">
-        ${upd ? `<span class="h-stamp ${stale ? 'is-old' : ''}" title="Tagesdaten vom ${esc(upd.toLocaleString('de-DE'))}"><i></i>Daten von ${esc(upd.toDateString() === now.toDateString() ? upd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : dateShort(dayKey(upd)))}</span>` : ''}
+        ${upd ? `<span class="h-stamp ${stale || refresh.status === 'running' ? 'is-old' : ''}" id="h-stamp" title="Tagesdaten vom ${esc(upd.toLocaleString('de-DE'))}"><i></i>${refresh.status === 'running' ? 'Wird abgerufen …' : `Daten von ${esc(upd.toDateString() === now.toDateString() ? upd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : dateShort(dayKey(upd)))}`}</span>` : ''}
         <a class="icon-btn has-dot" href="#/settings" aria-label="Einstellungen">${ICONS.settings}${GHSync.getConfig() ? `<i id="sync-dot" class="sync-dot s-${sync.status}" title="${esc(syncTitle())}"></i>` : ''}</a>
       </div>
     </header>
