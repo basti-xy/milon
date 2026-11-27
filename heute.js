@@ -32,7 +32,7 @@ async function loadHealth() {
     } catch { /* offline oder Datei fehlt – letzter Stand bleibt */ }
   }
   if (typeof loadStats === 'function' && await loadStats()) changed = true;   // statistik.js (health/stats.json)
-  if (changed && ['home', 'koerper', 'training', 'belastung', 'werte', 'statistik'].includes(currentRoute().name)) rerenderCurrent();
+  if (changed && ['home', 'koerper', 'training', 'belastung', 'werte', 'statistik', 'woche'].includes(currentRoute().name)) rerenderCurrent();
 }
 
 /* ---------- Jetzt abrufen: startet den Workflow „Tagesdaten“ im Daten-Repository ----------
@@ -192,13 +192,17 @@ function renderHeute() {
     ${storageOk ? '' : '<section class="card warn-card"><strong>Speichern nicht möglich.</strong> Dieser Browser blockiert den lokalen Speicher (z. B. privates Fenster). Streak und Verlauf gehen beim Schließen verloren.</section>'}
     <div class="h-grid">
       ${warns.length ? `<div class="h-warns" style="display:grid;gap:8px">${warns.map((w) => `<div class="h-warn lv-${esc(w.level)}">${esc(w.text)}</div>`).join('')}</div>` : ''}
-      ${assessHtml(d)}
-      ${todoHtml(d, s, a, now)}
-      ${metricsHtml(d)}
-      ${loadTileHtml()}
-      ${weekCardHtml(d, wk, s, now)}
-      ${racesHtml(d, now)}
-      <section class="tile gcal-card" id="h-cal">${gcalHtml(now, 0, { compact: true })}</section>
+      <div class="h-col h-col-a">
+        ${assessHtml(d)}
+        ${todoHtml(d, s, a, now)}
+        ${loadTileHtml()}
+        ${racesHtml(d, now)}
+      </div>
+      <div class="h-col h-col-b">
+        ${weekCardHtml(d, wk, s, now)}
+        ${metricsHtml(d)}
+        <section class="tile gcal-card" id="h-cal">${gcalHtml(now, 0, { compact: true })}</section>
+      </div>
     </div>
     ${backupReminderHtml(hist, now)}
   </div>`;
@@ -279,16 +283,16 @@ function todoHtml(d, s, a, now) {
   </section>`;
 }
 /* ---------- Alle Einheiten der Woche (Wunsch des Nutzers 27.11.2026) ----------
-   In der Karte „Diese Woche“: oben „Noch geplant“ (offene Plan-Einheiten ab heute, Ring-Punkt, Uhrzeit, Link „Kleidung“),
-   darunter „Erledigt“ (Schwimmen, Rad, Laufen mit Erfassen-Knopf, Gym, Dehnen), nicht gemachte Plan-Einheiten grau;
-   ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
+   Seite „Woche“ (#/woche, Antippen der Karte „Diese Woche“): oben „Noch geplant“ (offene Plan-Einheiten ab heute, Ring-Punkt,
+   Uhrzeit, Link „Kleidung“), darunter „Erledigt“ (Schwimmen, Rad, Laufen mit Erfassen-Knopf, Gym, Dehnen), nicht gemachte
+   Plan-Einheiten grau; ‹ › blättert Wochen zurück. Laufende Woche aus daily.json → week.days, ältere aus training/weekly.json → units;
    Gym und Dehnen aus den Milon-Daten. Knopf wie in „Steht heute an“ (einheit.js). */
-let hUnitsWeek = 0;       // 0 = diese Woche, 1 = letzte Woche, …
-let hUnitsOpen = false;   // Liste zugeklappt, bis man sie öffnet (Wunsch des Nutzers 27.11.2026); bleibt beim Blättern offen
-function unitsWeekHtml(d, now) {
-  if (typeof unitBtnHtml !== 'function') return '';
+let hUnitsWeek = 0;       // 0 = diese Woche, 1 = letzte Woche, … (Seite „Woche“)
+/** Einheiten einer Woche (offset 0 = laufende Woche): { n, nUp, html, label, range, from, oldest, src } oder null. */
+function unitsWeekBuild(d, now, offset = hUnitsWeek) {
+  if (typeof unitBtnHtml !== 'function') return null;
   const tKey = dayKey(now);
-  const mon = weekStart(now); mon.setDate(mon.getDate() - 7 * hUnitsWeek);
+  const mon = weekStart(now); mon.setDate(mon.getDate() - 7 * offset);
   const sun = addDays(mon, 6);
   const from = dayKey(mon), to = dayKey(sun);
   const days = new Map();
@@ -299,7 +303,7 @@ function unitsWeekHtml(d, now) {
     <div class="h-row-main"><div class="h-row-title">${esc(title)}</div><div class="h-row-sub">${esc(sub)}</div></div>${btn}</div>`;
   const meta = (min, km) => [min ? `${fmtHM(min / 60)} h` : '', km ? `${fmtNum(km)} km` : ''].filter(Boolean).join(' · ');
   let src = '';
-  if (hUnitsWeek === 0 && d?.week?.from === from) {
+  if (offset === 0 && d?.week?.from === from) {
     src = 'daily';
     for (const day of d.week.days || []) {
       for (const x of (day.done || []).filter((z) => day.date <= tKey && z.id && ['swim', 'bike', 'run'].includes(z.sport))) {
@@ -341,20 +345,29 @@ function unitsWeekHtml(d, now) {
   const oldest = (trainingData()?.weeks || []).reduce((m, w) => (w.from < m ? w.from : m), from);
   const n = [...days.values()].reduce((a, l) => a + l.length, 0);
   const nUp = [...upcoming.values()].reduce((a, l) => a + l.length, 0);
-  const label = hUnitsWeek === 0 ? 'diese Woche' : hUnitsWeek === 1 ? 'letzte Woche' : `KW ${isoWeek(mon)}`;
+  const label = offset === 0 ? 'Diese Woche' : offset === 1 ? 'Letzte Woche' : `KW ${isoWeek(mon)}`;
   const dayHead = (k) => `<div class="h-uw-day small muted">${esc(k === tKey ? `Heute · ${dateShort(k)}` : dateShort(k))}</div>`;
   const upBody = [...upcoming.keys()].sort().map((k) => dayHead(k) + upcoming.get(k).join('')).join('');
   const doneBody = [...days.keys()].sort().reverse().map((k) => dayHead(k) + days.get(k).join('')).join('');
   const body = (upBody ? `<div class="h-uw-sec k">Noch geplant</div>${upBody}` : '') + (doneBody ? `${upBody ? '<div class="h-uw-sec k">Erledigt</div>' : ''}${doneBody}` : '');
-  return `<details class="h-uw" ${hUnitsOpen ? 'open' : ''}>
-    <summary class="h-uw-head"><span class="h-uw-title"><span class="k">Alle Einheiten · ${esc(label)}</span>${n || nUp ? `<span class="small muted">${esc([n ? `${n} erledigt` : '', nUp ? `${nUp} geplant` : ''].filter(Boolean).join(' · '))}</span>` : ''}</span><span class="h-uw-chev" aria-hidden="true"></span></summary>
+  const range = `${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`;
+  const html = body || `<div class="h-empty">${src || n ? 'Keine Einheiten in dieser Woche.' : 'Für diese Woche gibt es noch keine Übersicht.'}</div>`;
+  return { n, nUp, html, label, range, from, oldest, src };
+}
+/** Seite „Woche“ (#/woche): alle Einheiten der gewählten Woche, blätterbar. */
+function renderWoche() {
+  const now = new Date();
+  const w = unitsWeekBuild(healthData(), now, hUnitsWeek);
+  app.innerHTML = `<div class="page page-mid page-woche">
+    ${topbar({ backHref: '#/', title: 'Woche' })}
     <div class="h-uw-nav">
-      <button class="icon-btn sm" data-act="h-uw-prev" aria-label="Woche davor" ${from <= oldest ? 'disabled' : ''}>‹</button>
-      <span class="h-uw-range">${esc(`${pad2(mon.getDate())}.${pad2(mon.getMonth() + 1)}.–${pad2(sun.getDate())}.${pad2(sun.getMonth() + 1)}.`)}</span>
-      <button class="icon-btn sm" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button>
+      <button class="icon-btn" data-act="h-uw-prev" aria-label="Woche davor" ${!w || w.from <= w.oldest ? 'disabled' : ''}>‹</button>
+      <div class="h-uw-range"><div class="k">${esc(w?.label || '')}</div><div>${esc(w?.range || '')}</div></div>
+      <button class="icon-btn" data-act="h-uw-next" aria-label="Woche danach" ${hUnitsWeek === 0 ? 'disabled' : ''}>›</button>
     </div>
-    ${body || `<div class="h-empty">${src || n ? 'Keine Einheiten in dieser Woche.' : 'Für diese Woche gibt es noch keine Übersicht.'}</div>`}
-  </details>`;
+    ${w && (w.n || w.nUp) ? `<p class="small muted h-uw-count">${esc([w.nUp ? `${w.nUp} geplant` : '', w.n ? `${w.n} erledigt` : ''].filter(Boolean).join(' · '))}</p>` : ''}
+    <section class="tile h-uw">${w ? w.html : '<div class="h-empty">Noch keine Daten.</div>'}</section>
+  </div>`;
 }
 function dehnRow(r, label, btn, { done = false, sub = '' } = {}) {
   return `<div class="h-row ${done ? 'is-done' : ''}"><span class="sdot s-stretch" aria-hidden="true"></span>
@@ -401,8 +414,8 @@ function dehnRows(s, a, now, addMin) {
 /* ---------- Körper: 8 Kacheln ---------- */
 function metricsHtml(d) {
   if (!d?.metrics?.length) return '';
-  return `<div class="h-metrics-head"><span class="k">Körper · heute und 28 Tage</span><span class="h-legend">${gBadge()} = von Garmin berechnet</span></div>
-    <div class="h-metrics">${d.metrics.map(metricTileHtml).join('')}</div>`;
+  return `<div class="h-body"><div class="h-metrics-head"><span class="k">Körper · heute und 28 Tage</span><span class="h-legend">${gBadge()} = von Garmin berechnet</span></div>
+    <div class="h-metrics">${d.metrics.map(metricTileHtml).join('')}</div></div>`;
 }
 function metricTileHtml(m) {
   const g = m.garmin_estimate ? gBadge() : '';
@@ -487,8 +500,10 @@ function weekCardHtml(d, wk, s, now) {
     const k = dayKey(day);
     return `<div class="${k === tKey ? 't' : k > tKey ? 'f' : ''}"><small>${WD_SHORT[i]}</small><b>${day.getDate()}</b>${dotsHtml(dayDots(k, d, s, now))}</div>`;
   }).join('');
-  return `<section class="tile h-week span-2">
-    <div class="sec-head"><span class="k">Diese Woche</span><span class="m small muted">${pct != null ? `${pct} %` : ''}</span></div>
+  const uw = unitsWeekBuild(d, now, 0);
+  const uwCount = uw ? [uw.nUp ? `${uw.nUp} geplant` : '', uw.n ? `${uw.n} erledigt` : ''].filter(Boolean).join(' · ') || 'Einheiten der Woche' : '';
+  return `<a class="tile h-week" href="#/woche" aria-label="Diese Woche – alle Einheiten ansehen">
+    <div class="sec-head"><span class="k">Diese Woche</span><span class="m small muted">${pct != null ? `${pct} % ›` : '›'}</span></div>
     <div class="h-week-top">
       <div class="h-hours">${fmtHM(done)}<span>${planned ? ` von ${fmtHM(planned)} h geplant` : ' h'}</span></div>
       ${w12.length ? `<div class="h-12w" role="img" aria-label="Trainingsstunden der letzten 12 Wochen">${w12.map((x) => `<i class="${x.current ? 'is-now' : ''}" style="height:${Math.max(3, Math.round((x.hours / max12) * 100))}%" title="KW ${Number(x.week.split('-W')[1])}: ${fmtHM(x.hours)} h"></i>`).join('')}</div>` : ''}
@@ -496,9 +511,9 @@ function weekCardHtml(d, wk, s, now) {
     ${bar ? `<div class="h-sbar">${bar}</div>` : ''}
     <div class="h-sums">${['swim', 'bike', 'run'].map((k) => `<span>${SPORT_SHORT[k]} ${fmtHM(wk?.done_h?.[k] || 0)}</span>`).join('')}${gym ? `<span>${gym}</span>` : ''}${dPlan ? `<span class="x-stretch">Dehnen ${dDone} von ${dPlan}</span>` : ''}</div>
     <div class="wk">${days}</div>
-    ${unitsWeekHtml(d, now)}
+    ${uwCount ? `<div class="h-week-more"><span>${esc(uwCount)}</span><span class="m">Alle Einheiten ›</span></div>` : ''}
     <div class="h-leg"><span><i class="s-swim"></i>Schwimmen</span><span><i class="s-bike"></i>Rad</span><span><i class="s-run"></i>Laufen</span><span><i class="s-strength"></i>Gym</span><span><i class="s-stretch"></i>Dehnen</span>${weeklyLegend()}<span>gefüllt = erledigt · Ring = offen</span></div>
-  </section>`;
+  </a>`;
 }
 
 /* ---------- Wettkämpfe ---------- */
@@ -704,7 +719,7 @@ function renderTraining() {
 function handleHeuteAction(act, el) {
   if (handleLoadAction(act, el)) return; // belastung.js
   if (act === 'h-refresh') { refreshHealthNow(); return; }
-  if (act === 'h-uw-prev' || act === 'h-uw-next') { hUnitsWeek = Math.max(0, hUnitsWeek + (act === 'h-uw-prev' ? 1 : -1)); hUnitsOpen = true; rerenderCurrent(); return; }
+  if (act === 'h-uw-prev' || act === 'h-uw-next') { hUnitsWeek = Math.max(0, hUnitsWeek + (act === 'h-uw-prev' ? 1 : -1)); renderWoche(); window.scrollTo(0, 0); return; }
   if (act === 'h-kd-range') { kdDays = Number(el.dataset.days) || 30; renderKoerper(currentRoute().arg); return; }
   if (act === 'h-cal-prev' || act === 'h-cal-next') {
     gcalOffset = Math.max(0, gcalOffset + (act === 'h-cal-prev' ? 1 : -1));
@@ -713,5 +728,3 @@ function handleHeuteAction(act, el) {
   }
 }
 
-// „Alle Einheiten“ in der Karte „Diese Woche“: Auf-/Zuklappen merken
-document.addEventListener('toggle', (e) => { if (e.target?.classList?.contains('h-uw')) hUnitsOpen = e.target.open; }, true);
