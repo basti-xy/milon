@@ -79,7 +79,7 @@ function klCalcFromPlan(uid) {
     wind: (wx && klWindStufe(wx.wind, wx.gust, M)) || c.wind, wet: (wx && klNaesse(wx.precip_max, M)) || c.wet,
     light: (wx && klLicht(wx.sun_s, wx.dark_share, M)) || c.light, intensity: p.intensity || c.intensity,
     duration: klDauer(sport, p.min, M) || c.duration,
-    _plan: { title: p.title, date: p.date, time: p.time, hasWx: !!wx },
+    _plan: { title: p.title, date: p.date, time: p.time, hasWx: !!wx, keptFrom: wx?.kept ? (String(wx.src || '').match(/Stand (\d{4}-\d{2}-\d{2})/)?.[1] || '') : '' },
   });
   return c;
 }
@@ -104,7 +104,7 @@ function renderKleidung(arg = '', arg2 = '') {
 function klRechnerHtml() {
   const c = klCalc;
   const plan = c._plan;
-  return `${plan ? `<p class="small muted kl-plan-note">${esc(`${plan.title} · ${dateShort(plan.date)} ${plan.time}`)} – ${plan.hasWx ? 'Wetter: Open-Meteo-Vorhersage (Modellwerte, Ort auf ca. 10 km gerundet), bitte prüfen.' : 'keine Vorhersage vorhanden, bitte Wetter eintragen.'}</p>` : ''}
+  return `${plan ? `<p class="small muted kl-plan-note">${esc(`${plan.title} · ${dateShort(plan.date)} ${plan.time}`)} – ${plan.hasWx ? `Wetter: Open-Meteo-Vorhersage${plan.keptFrom ? ` vom ${dateShort(plan.keptFrom)} (neuer Abruf ohne Antwort)` : ''} (Modellwerte, Ort auf ca. 10 km gerundet), bitte prüfen.` : 'keine Vorhersage vorhanden, bitte Wetter eintragen.'}</p>` : ''}
   <section class="card kl kl-calc">
     <div class="seg kl-seg" role="radiogroup" aria-label="Sportart">${[['lauf', 'Laufen'], ['rad', 'Rad']].map(([v, l]) => `<button type="button" role="radio" data-klp-sport="${v}" class="${c.sport === v ? 'is-on' : ''}" aria-checked="${c.sport === v}">${l}</button>`).join('')}</div>
     <div class="kl-wx">
